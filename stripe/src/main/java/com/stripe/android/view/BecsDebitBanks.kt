@@ -2,22 +2,36 @@ package com.stripe.android.view
 
 import android.content.Context
 import android.os.Parcelable
+import android.util.Log
+import com.stripe.android.StripeResourceManager
 import com.stripe.android.model.StripeJsonUtils
-import java.util.Scanner
 import kotlinx.android.parcel.Parcelize
 import org.json.JSONObject
 
 internal class BecsDebitBanks(
-    internal val banks: List<Bank>,
+    context: Context,
     private val shouldIncludeTestBank: Boolean = true
 ) {
-    constructor(
-        context: Context,
-        shouldIncludeTestBank: Boolean = true
-    ) : this(
-        createBanksData(context),
-        shouldIncludeTestBank
-    )
+    internal var banks: List<Bank>
+
+    init {
+        val resourceManager = StripeResourceManager(context)
+        val json = requireNotNull(
+            resourceManager
+                .fetchJson("au_becs_bsb",
+                object : StripeResourceManager.Companion.JsonResourceCallback {
+                    override fun onSuccess(json: JSONObject) {
+                        Log.d("StripeResourceManager", "updating banks")
+                        banks = createBanksData(json)
+                    }
+
+                    override fun onError(error: Throwable) {
+                        Log.e("StripeResourceManager", "error in BecsDebitBanks $error")
+                    }
+                })
+        )
+        banks = createBanksData(json)
+    }
 
     fun byPrefix(bsb: String): Bank? {
         return banks
@@ -35,10 +49,10 @@ internal class BecsDebitBanks(
     ) : Parcelable
 
     private companion object {
-        private fun createBanksData(context: Context): List<Bank> {
-            return StripeJsonUtils.jsonObjectToMap(
-                JSONObject(readFile(context))
-            ).orEmpty().map { entry ->
+        private fun createBanksData(json: JSONObject): List<Bank> {
+            return StripeJsonUtils.jsonObjectToMap(json)
+                .orEmpty()
+                .map { entry ->
                 (entry.value as List<*>).let {
                     Bank(
                         prefix = entry.key,
@@ -47,12 +61,6 @@ internal class BecsDebitBanks(
                     )
                 }
             }
-        }
-
-        private fun readFile(context: Context): String {
-            return Scanner(
-                context.resources.assets.open("au_becs_bsb.json")
-            ).useDelimiter("\\A").next()
         }
 
         private val STRIPE_TEST_BANK = Bank(
