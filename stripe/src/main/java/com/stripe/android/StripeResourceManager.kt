@@ -2,16 +2,15 @@ package com.stripe.android
 
 import android.content.Context
 import android.util.Log
+import java.io.IOException
+import java.util.Collections
+import java.util.Scanner
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Dispatchers.Main
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
-import java.io.File
-import java.io.IOException
-import java.util.Collections
-import java.util.Scanner
 
 class StripeResourceManager(
     context: Context
@@ -30,55 +29,47 @@ class StripeResourceManager(
             return it
         }
 
+        // This will fail the first time with a strict mode violation
+        val prefs =
+            context.getSharedPreferences("stripe_resource_manager", Context.MODE_PRIVATE)
+        prefs.getString(name, null)?.let {
+            Log.d("StripeResourceManager", "found $name in shared prefs")
+            return readJson(Scanner(it))
+        }
+
         Log.d("StripeResourceManager", "launching coroutine")
-
-        val withExt = "$name.json"
-
         scope.launch {
-            val fromDisk = fetchJsonFromDisk(withExt)
-            if (fromDisk != null) {
-                callback?.let { it::onSuccess.onMain(fromDisk) }
-            } else {
-                if (activeRequests.add(name)) {
-                    Log.d("StripeResourceManager", "fetching $name from cdn")
-                    try {
-                        val result = requestExecutor.execute(JsonResourceRequest(name)).responseJson
-                        jsonCache[name] = result
+            if (activeRequests.add(name)) {
+                Log.d("StripeResourceManager", "fetching $name from cdn")
+                try {
+                    val result = requestExecutor.execute(JsonResourceRequest(name)).responseJson
+                    jsonCache[name] = result
 
-                        callback?.let { it::onSuccess.onMain(result) }
+                    callback?.let { it::onSuccess.onMain(result) }
 
-                        Log.d("StripeResourceManager", "writing $name to disk")
+                    Log.d("StripeResourceManager", "writing $name to prefs")
 
-                        val cacheFile = File(context.cacheDir, withExt)
-                        cacheFile.createNewFile()
-                        cacheFile.writeText(result.toString())
-                    } catch (e: Throwable) {
-                        Log.e("StripeResourceManager", e.toString())
-                        callback?.let { it::onError.onMain(e) }
-                    } finally {
-                        activeRequests.remove(name)
+                    with(prefs.edit()) {
+                        putString(name, result.toString())
+                        commit()
                     }
-                } else {
-                    Log.d("StripeResourceManager", "request for $name already exists")
+                } catch (e: Throwable) {
+                    Log.e("StripeResourceManager", e.toString())
+                    callback?.let { it::onError.onMain(e) }
+                } finally {
+                    activeRequests.remove(name)
                 }
+            } else {
+                Log.d("StripeResourceManager", "request for $name already exists")
             }
         }
 
+        val withExt = "$name.json"
         return if (context.assets.list("")?.contains(withExt) == true) {
             readJson(Scanner(context.assets.open(withExt)))
         } else {
             null
         }
-    }
-
-    private fun fetchJsonFromDisk(fileName: String): JSONObject? {
-        Log.d("StripeResourceManager", "looking for $fileName in ${context.cacheDir}")
-        return File(context.cacheDir, fileName)
-            .takeIf { it.exists() }
-            ?.let {
-                Log.d("StripeResourceManager", "found $fileName on disk")
-                readJson(Scanner(it))
-            }
     }
 
     companion object {
