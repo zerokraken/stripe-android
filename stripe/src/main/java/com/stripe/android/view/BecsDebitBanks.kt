@@ -3,6 +3,11 @@ package com.stripe.android.view
 import android.content.Context
 import android.os.Parcelable
 import android.util.Log
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.Observer
+import androidx.lifecycle.Transformations
 import com.stripe.android.StripeResourceManager
 import com.stripe.android.model.StripeJsonUtils
 import kotlinx.android.parcel.Parcelize
@@ -10,23 +15,19 @@ import org.json.JSONObject
 
 internal class BecsDebitBanks(
     context: Context,
+    lifecycleOwner: LifecycleOwner,
     private val shouldIncludeTestBank: Boolean = true
 ) {
-    internal var banks: List<Bank>
+    private val banks: LiveData<List<Bank>>
 
     init {
         val resourceManager = StripeResourceManager.getInstance(context)
-        banks = createBanksData(
-            requireNotNull(
-                resourceManager
-                    .fetchJson("au_becs_bsb") { result: Result<JSONObject> ->
-                        result.fold({
-                            Log.d("StripeResourceManager", "updating banks")
-                            banks = createBanksData(it)
-                        }, {
-                            Log.e("StripeResourceManager", "error in BecsDebitBanks $it")
-                        })
-                    }))
+        val jsonLiveData = MutableLiveData<JSONObject>()
+        banks = Transformations.map(jsonLiveData, ::createBanksData)
+        banks.observe(lifecycleOwner, Observer { })
+
+        resourceManager
+            .fetchJson("au_becs_bsb", jsonLiveData)
         resourceManager.fetchJson("au_becs_bsb") {
             Log.d("StripeResourceManager", "second callback")
         }
@@ -34,8 +35,9 @@ internal class BecsDebitBanks(
 
     fun byPrefix(bsb: String): Bank? {
         return banks
-            .plus(listOfNotNull(STRIPE_TEST_BANK.takeIf { shouldIncludeTestBank }))
-            .firstOrNull {
+            .value
+            ?.plus(listOfNotNull(STRIPE_TEST_BANK.takeIf { shouldIncludeTestBank }))
+            ?.firstOrNull {
                 bsb.startsWith(it.prefix)
             }
     }

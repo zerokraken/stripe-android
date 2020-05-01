@@ -5,15 +5,20 @@ import android.text.Editable
 import android.text.InputFilter
 import android.text.method.DigitsKeyListener
 import android.util.AttributeSet
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.LifecycleRegistry
 import com.stripe.android.R
 
 internal class BecsDebitBsbEditText @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
     defStyleAttr: Int = androidx.appcompat.R.attr.editTextStyle
-) : StripeEditText(context, attrs, defStyleAttr) {
+) : StripeEditText(context, attrs, defStyleAttr), LifecycleOwner {
 
-    private val banks = BecsDebitBanks(context)
+    private val lifecycleRegistry = LifecycleRegistry(this)
+
+    private val banks = BecsDebitBanks(context, this)
 
     var onBankChangedCallback: (BecsDebitBanks.Bank?) -> Unit = {}
     var onCompletedCallback: () -> Unit = {}
@@ -49,6 +54,8 @@ internal class BecsDebitBsbEditText @JvmOverloads constructor(
         }
 
     init {
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
+
         filters = arrayOf(InputFilter.LengthFilter(MAX_LENGTH))
         keyListener = DigitsKeyListener.getInstance(false, true)
 
@@ -104,6 +111,22 @@ internal class BecsDebitBsbEditText @JvmOverloads constructor(
                 }
             }
         })
+    }
+
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_START)
+    }
+
+    override fun onDetachedFromWindow() {
+        super.onDetachedFromWindow()
+
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_STOP)
+    }
+
+    override fun getLifecycle(): Lifecycle {
+        return lifecycleRegistry
     }
 
     private fun updateIcon(isError: Boolean) {
