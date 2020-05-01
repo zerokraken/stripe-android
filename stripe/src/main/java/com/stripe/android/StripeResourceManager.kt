@@ -4,16 +4,13 @@ import android.content.Context
 import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Dispatchers.Main
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.File
-import java.io.IOException
 import java.util.Collections
 import java.util.Scanner
 
-class StripeResourceManager(
+class StripeResourceManager private constructor(
     context: Context
 ) {
     private val context = context.applicationContext
@@ -35,7 +32,7 @@ class StripeResourceManager(
         val withExt = "$name.json"
 
         scope.launch {
-            val fromDisk = fetchJsonFromDisk(withExt)
+            val fromDisk = readJson(context.cacheDir, withExt)
             if (fromDisk != null) {
                 callback?.onMain(Result.success(fromDisk))
             } else {
@@ -71,73 +68,22 @@ class StripeResourceManager(
         }
     }
 
-    private fun fetchJsonFromDisk(fileName: String): JSONObject? {
-        Log.d("StripeResourceManager", "looking for $fileName in ${context.cacheDir}")
-        return File(context.cacheDir, fileName)
-            .takeIf { it.exists() }
-            ?.let {
-                Log.d("StripeResourceManager", "found $fileName on disk")
-                readJson(Scanner(it))
-            }
-    }
-
-    companion object {
-        private suspend inline fun <T> ((T) -> Any).onMain(input: T) {
-            val f = this
-            withContext(Main) {
-                f(input)
-            }
-        }
+    internal companion object :
+        SingletonHolder<Context, StripeResourceManager>(::StripeResourceManager) {
 
         private fun readJson(scanner: Scanner): JSONObject {
             return JSONObject(scanner.useDelimiter("\\A").next())
         }
 
-        interface JsonResourceCallback {
-            fun onSuccess(result: Result<JSONObject>)
-        }
-
-        internal data class JsonResourceRequest(
-            internal val resourceName: String
-        ) : StripeRequest() {
-            override val method: Method = Method.GET
-            override val baseUrl: String = "$HOST/$resourceName.json"
-            override val mimeType: MimeType = MimeType.Json
-            override val params: Map<String, Any> = emptyMap()
-            override val headersFactory: RequestHeadersFactory = RequestHeadersFactory.Default()
-
-            internal companion object {
-                internal const val HOST = "https://dyqiu3dgtk0l0.cloudfront.net"
-            }
-        }
-
-        internal interface ResourceRequestExecutor {
-            fun execute(request: JsonResourceRequest): StripeResponse
-
-            class Default internal constructor(
-                private val logger: Logger = Logger.noop()
-            ) : ResourceRequestExecutor {
-                private val connectionFactory = ConnectionFactory.Default()
-
-                override fun execute(request: JsonResourceRequest): StripeResponse {
-                    return executeInternal(request)
+        private fun readJson(directory: File, fileName: String): JSONObject? {
+            Log.d("StripeResourceManager", "looking for $fileName in $directory")
+            return File(directory, fileName)
+                .takeIf { it.exists() }
+                ?.let {
+                    Log.d("StripeResourceManager", "found $fileName on disk")
+                    readJson(Scanner(it))
                 }
-
-                private fun executeInternal(request: JsonResourceRequest): StripeResponse {
-                    logger.info(request.toString())
-
-                    connectionFactory.create(request).use {
-                        try {
-                            val stripeResponse = it.response
-                            logger.info(stripeResponse.toString())
-                            return stripeResponse
-                        } catch (e: IOException) {
-                            logger.error("Exception while making Stripe resource request", e)
-                            throw e
-                        }
-                    }
-                }
-            }
         }
     }
 }
+

@@ -15,18 +15,19 @@ internal class BecsDebitBanks(
     internal var banks: List<Bank>
 
     init {
-        val resourceManager = StripeResourceManager(context)
-        val json = requireNotNull(
-            resourceManager
-                .fetchJson("au_becs_bsb") { result: Result<JSONObject> ->
-                    result.fold({
-                        Log.d("StripeResourceManager", "updating banks")
-                        banks = createBanksData(it)
-                    }, {
-                        Log.e("StripeResourceManager", "error in BecsDebitBanks $it")
-                    })
-                })
-        banks = createBanksData(json)
+        val resourceManager = StripeResourceManager.getInstance(context)
+        banks = createBanksData(
+            requireNotNull(
+                resourceManager
+                    .fetchJson("au_becs_bsb") { result: Result<JSONObject> ->
+                        result.fold({
+                            Log.d("StripeResourceManager", "updating banks")
+                            banks = createBanksData(it)
+                            Unit
+                        }, {
+                            Log.e("StripeResourceManager", "error in BecsDebitBanks $it")
+                        })
+                    }))
     }
 
     fun byPrefix(bsb: String): Bank? {
