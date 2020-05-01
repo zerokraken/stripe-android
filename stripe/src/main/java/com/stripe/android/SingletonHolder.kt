@@ -3,7 +3,7 @@ package com.stripe.android
 /**
  * Taken from https://medium.com/@BladeCoder/kotlin-singletons-with-argument-194ef06edd9e
  */
-internal open class SingletonHolder<in A, out T: Any>(creator: (A) -> T) {
+internal open class SingletonHolder<in A, out T : Any>(creator: (A) -> T) {
     private var creator: ((A) -> T)? = creator
     @Volatile private var instance: T? = null
 

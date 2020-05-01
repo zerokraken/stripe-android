@@ -3,13 +3,12 @@ package com.stripe.android
 import android.content.Context
 import android.util.Log
 import androidx.lifecycle.MutableLiveData
+import java.io.File
+import java.util.Scanner
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.json.JSONObject
-import java.io.File
-import java.util.Collections
-import java.util.Scanner
 
 private typealias Callback = (Result<JSONObject>) -> Unit
 class StripeResourceManager private constructor(
@@ -117,4 +116,3 @@ class StripeResourceManager private constructor(
         }
     }
 }
-
