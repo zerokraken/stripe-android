@@ -23,11 +23,13 @@ internal class BecsDebitBanks(
                         result.fold({
                             Log.d("StripeResourceManager", "updating banks")
                             banks = createBanksData(it)
-                            Unit
                         }, {
                             Log.e("StripeResourceManager", "error in BecsDebitBanks $it")
                         })
                     }))
+        resourceManager.fetchJson("au_becs_bsb") {
+            Log.d("StripeResourceManager", "second callback")
+        }
     }
 
     fun byPrefix(bsb: String): Bank? {

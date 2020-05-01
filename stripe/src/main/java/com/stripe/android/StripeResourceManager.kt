@@ -2,6 +2,7 @@ package com.stripe.android
 
 import android.content.Context
 import android.util.Log
+import androidx.lifecycle.MutableLiveData
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -10,18 +11,20 @@ import java.io.File
 import java.util.Collections
 import java.util.Scanner
 
+private typealias Callback = (Result<JSONObject>) -> Unit
 class StripeResourceManager private constructor(
     context: Context
 ) {
+
     private val context = context.applicationContext
     private val requestExecutor = ResourceRequestExecutor.Default()
     private val scope = CoroutineScope(Dispatchers.IO)
 
-    private val jsonCache =
-        Collections.synchronizedMap(mutableMapOf<String, JSONObject>())
-    private val activeRequests = Collections.synchronizedSet(mutableSetOf<String>())
+    private val jsonCache = mutableMapOf<String, JSONObject>()
+    private val callbacks =
+        mutableMapOf<String, MutableList<Callback>>()
 
-    fun fetchJson(name: String, callback: ((Result<JSONObject>) -> Any)?): JSONObject? {
+    fun fetchJson(name: String, callback: Callback? = null): JSONObject? {
         jsonCache[name]?.let {
             Log.d("StripeResourceManager", "found $name in memory")
             return it
@@ -32,31 +35,34 @@ class StripeResourceManager private constructor(
         val withExt = "$name.json"
 
         scope.launch {
+            synchronized(callbacks) {
+                if (name in callbacks) {
+                    callback?.let { callbacks[name]!!.add(it) }
+                    return@launch
+                } else {
+                    callbacks[name] = mutableListOf()
+                    callback?.let { callbacks[name]!!.add(it) }
+                }
+            }
+
             val fromDisk = readJson(context.cacheDir, withExt)
             if (fromDisk != null) {
-                callback?.onMain(Result.success(fromDisk))
+                onResult(name, Result.success(fromDisk))
             } else {
-                if (activeRequests.add(name)) {
-                    Log.d("StripeResourceManager", "fetching $name from cdn")
-                    try {
-                        val result = requestExecutor.execute(JsonResourceRequest(name)).responseJson
-                        jsonCache[name] = result
+                Log.d("StripeResourceManager", "fetching $name from cdn")
+                try {
+                    val result = requestExecutor.execute(JsonResourceRequest(name)).responseJson
 
-                        callback?.onMain(Result.success(result))
+                    onResult(name, Result.success(result))
 
-                        Log.d("StripeResourceManager", "writing $name to disk")
+                    Log.d("StripeResourceManager", "writing $name to disk")
 
-                        val cacheFile = File(context.cacheDir, withExt)
-                        cacheFile.createNewFile()
-                        cacheFile.writeText(result.toString())
-                    } catch (e: Throwable) {
-                        Log.e("StripeResourceManager", e.toString())
-                        callback?.onMain(Result.failure(e))
-                    } finally {
-                        activeRequests.remove(name)
-                    }
-                } else {
-                    Log.d("StripeResourceManager", "request for $name already exists")
+                    val cacheFile = File(context.cacheDir, withExt)
+                    cacheFile.createNewFile()
+                    cacheFile.writeText(result.toString())
+                } catch (e: Throwable) {
+                    Log.e("StripeResourceManager", e.toString())
+                    onResult(name, Result.failure(e))
                 }
             }
         }
@@ -68,11 +74,36 @@ class StripeResourceManager private constructor(
         }
     }
 
+    fun fetchJson(name: String, liveData: MutableLiveData<JSONObject>) {
+        liveData.postValue(
+            fetchJson(name) {
+                it.getOrNull()?.let(liveData::postValue)
+            }
+        )
+    }
+
+    private suspend fun onResult(name: String, result: Result<JSONObject>) {
+        var toUpdate: List<Callback>?
+        synchronized(callbacks) {
+            toUpdate = callbacks.remove(name)
+        }
+
+        result.getOrNull()?.let {
+            jsonCache[name] = it
+        }
+
+        toUpdate?.forEach {
+            it.onMain(result)
+        }
+    }
+
     internal companion object :
         SingletonHolder<Context, StripeResourceManager>(::StripeResourceManager) {
 
         private fun readJson(scanner: Scanner): JSONObject {
-            return JSONObject(scanner.useDelimiter("\\A").next())
+            scanner.use {
+                return JSONObject(it.useDelimiter("\\A").next())
+            }
         }
 
         private fun readJson(directory: File, fileName: String): JSONObject? {
