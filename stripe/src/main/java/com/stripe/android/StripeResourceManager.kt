@@ -24,7 +24,7 @@ class StripeResourceManager(
         Collections.synchronizedMap(mutableMapOf<String, JSONObject>())
     private val activeRequests = Collections.synchronizedSet(mutableSetOf<String>())
 
-    fun fetchJson(name: String, callback: JsonResourceCallback? = null): JSONObject? {
+    fun fetchJson(name: String, callback: ((Result<JSONObject>) -> Any)?): JSONObject? {
         jsonCache[name]?.let {
             Log.d("StripeResourceManager", "found $name in memory")
             return it
@@ -37,7 +37,7 @@ class StripeResourceManager(
         scope.launch {
             val fromDisk = fetchJsonFromDisk(withExt)
             if (fromDisk != null) {
-                callback?.let { it::onSuccess.onMain(fromDisk) }
+                callback?.onMain(Result.success(fromDisk))
             } else {
                 if (activeRequests.add(name)) {
                     Log.d("StripeResourceManager", "fetching $name from cdn")
@@ -45,7 +45,7 @@ class StripeResourceManager(
                         val result = requestExecutor.execute(JsonResourceRequest(name)).responseJson
                         jsonCache[name] = result
 
-                        callback?.let { it::onSuccess.onMain(result) }
+                        callback?.onMain(Result.success(result))
 
                         Log.d("StripeResourceManager", "writing $name to disk")
 
@@ -54,7 +54,7 @@ class StripeResourceManager(
                         cacheFile.writeText(result.toString())
                     } catch (e: Throwable) {
                         Log.e("StripeResourceManager", e.toString())
-                        callback?.let { it::onError.onMain(e) }
+                        callback?.onMain(Result.failure(e))
                     } finally {
                         activeRequests.remove(name)
                     }
@@ -82,7 +82,7 @@ class StripeResourceManager(
     }
 
     companion object {
-        private suspend inline fun <T> ((T) -> Unit).onMain(input: T) {
+        private suspend inline fun <T> ((T) -> Any).onMain(input: T) {
             val f = this
             withContext(Main) {
                 f(input)
@@ -94,8 +94,7 @@ class StripeResourceManager(
         }
 
         interface JsonResourceCallback {
-            fun onSuccess(json: JSONObject)
-            fun onError(error: Throwable)
+            fun onSuccess(result: Result<JSONObject>)
         }
 
         internal data class JsonResourceRequest(

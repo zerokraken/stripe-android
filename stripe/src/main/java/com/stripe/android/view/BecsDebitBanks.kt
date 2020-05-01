@@ -18,18 +18,14 @@ internal class BecsDebitBanks(
         val resourceManager = StripeResourceManager(context)
         val json = requireNotNull(
             resourceManager
-                .fetchJson("au_becs_bsb",
-                object : StripeResourceManager.Companion.JsonResourceCallback {
-                    override fun onSuccess(json: JSONObject) {
+                .fetchJson("au_becs_bsb") { result: Result<JSONObject> ->
+                    result.fold({
                         Log.d("StripeResourceManager", "updating banks")
-                        banks = createBanksData(json)
-                    }
-
-                    override fun onError(error: Throwable) {
-                        Log.e("StripeResourceManager", "error in BecsDebitBanks $error")
-                    }
+                        banks = createBanksData(it)
+                    }, {
+                        Log.e("StripeResourceManager", "error in BecsDebitBanks $it")
+                    })
                 })
-        )
         banks = createBanksData(json)
     }
 
