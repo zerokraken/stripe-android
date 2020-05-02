@@ -3,6 +3,7 @@ package com.stripe.android.view
 import android.content.Context
 import android.os.Parcelable
 import android.util.Log
+import com.stripe.android.Logger
 import com.stripe.android.StripeResourceManager
 import com.stripe.android.model.StripeJsonUtils
 import kotlinx.android.parcel.Parcelize
@@ -15,7 +16,9 @@ internal class BecsDebitBanks(
     internal var banks: List<Bank>
 
     init {
-        val resourceManager = StripeResourceManager.getInstance(context)
+        val resourceManager = StripeResourceManager.getInstance(
+            StripeResourceManager.Args(context, logger = Logger.real())
+        )
         banks = createBanksData(
             requireNotNull(
                 resourceManager

@@ -1,7 +1,6 @@
 package com.stripe.android
 
 import android.content.Context
-import android.util.Log
 import androidx.lifecycle.MutableLiveData
 import java.io.File
 import java.util.Scanner
@@ -11,13 +10,12 @@ import kotlinx.coroutines.launch
 import org.json.JSONObject
 
 private typealias Callback = (Result<JSONObject>) -> Unit
-class StripeResourceManager private constructor(
-    context: Context
-) {
+class StripeResourceManager private constructor(args: Args) {
 
-    private val context = context.applicationContext
+    private val context = args.context.applicationContext
+    private val logger = args.logger
     private val requestExecutor = ResourceRequestExecutor.Default()
-    private val scope = CoroutineScope(Dispatchers.IO)
+    private val scope = args.workScope
 
     private val jsonCache = mutableMapOf<String, JSONObject>()
     private val callbacks =
@@ -25,17 +23,16 @@ class StripeResourceManager private constructor(
 
     fun fetchJson(name: String, callback: Callback? = null): JSONObject? {
         jsonCache[name]?.let {
-            Log.d("StripeResourceManager", "found $name in memory")
+            logger.debug("Found resource $name in memory")
             return it
         }
-
-        Log.d("StripeResourceManager", "launching coroutine")
 
         val withExt = "$name.json"
 
         scope.launch {
             synchronized(callbacks) {
                 if (name in callbacks) {
+                    logger.debug("Existing request for resource $name exists")
                     callback?.let { callbacks[name]!!.add(it) }
                     return@launch
                 } else {
@@ -46,21 +43,22 @@ class StripeResourceManager private constructor(
 
             val fromDisk = readJson(context.cacheDir, withExt)
             if (fromDisk != null) {
+                logger.debug("Found resource $name on disk")
                 onResult(name, Result.success(fromDisk))
             } else {
-                Log.d("StripeResourceManager", "fetching $name from cdn")
+                logger.debug("Fetching resource $name from cdn")
                 try {
                     val result = requestExecutor.execute(JsonResourceRequest(name)).responseJson
 
                     onResult(name, Result.success(result))
 
-                    Log.d("StripeResourceManager", "writing $name to disk")
+                    logger.debug("Writing resource $name to disk")
 
                     val cacheFile = File(context.cacheDir, withExt)
                     cacheFile.createNewFile()
                     cacheFile.writeText(result.toString())
                 } catch (e: Throwable) {
-                    Log.e("StripeResourceManager", e.toString())
+                    logger.error(e.toString())
                     onResult(name, Result.failure(e))
                 }
             }
@@ -96,23 +94,33 @@ class StripeResourceManager private constructor(
         }
     }
 
+    private fun readJson(directory: File, fileName: String): JSONObject? {
+        logger.debug("looking for $fileName in $directory")
+        return File(directory, fileName)
+            .takeIf { it.exists() }
+            ?.let {
+                logger.debug("found $fileName on disk")
+                readJson(Scanner(it))
+            }
+    }
+
+    internal data class Args(
+        val context: Context,
+        val workScope: CoroutineScope = CoroutineScope(Dispatchers.IO),
+        val logger: Logger = Logger.noop()
+    )
+
     internal companion object :
-        SingletonHolder<Context, StripeResourceManager>(::StripeResourceManager) {
+        SingletonHolder<Args, StripeResourceManager>(::StripeResourceManager) {
+
+        fun getInstance(context: Context): StripeResourceManager {
+            return getInstance(Args(context))
+        }
 
         private fun readJson(scanner: Scanner): JSONObject {
             scanner.use {
                 return JSONObject(it.useDelimiter("\\A").next())
             }
-        }
-
-        private fun readJson(directory: File, fileName: String): JSONObject? {
-            Log.d("StripeResourceManager", "looking for $fileName in $directory")
-            return File(directory, fileName)
-                .takeIf { it.exists() }
-                ?.let {
-                    Log.d("StripeResourceManager", "found $fileName on disk")
-                    readJson(Scanner(it))
-                }
         }
     }
 }
