@@ -16,9 +16,7 @@ internal class BecsDebitBanks(
     internal var banks: List<Bank>
 
     init {
-        val resourceManager = StripeResourceManager.getInstance(
-            StripeResourceManager.Args(context, logger = Logger.real())
-        )
+        val resourceManager = StripeResourceManager.getInstance(context)
         banks = createBanksData(
             requireNotNull(
                 resourceManager
