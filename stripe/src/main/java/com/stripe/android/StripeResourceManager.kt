@@ -17,7 +17,8 @@ internal constructor(
     context: Context,
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.IO),
     private val logger: Logger = Logger.real(),
-    private val requestExecutor: ResourceRequestExecutor.Default = ResourceRequestExecutor.Default()
+    private val requestExecutor: ResourceRequestExecutor = ResourceRequestExecutor.Default(),
+    private val assetManager: AssetManager = AssetManager.Default(context.applicationContext)
 ) {
 
     private val context = context.applicationContext
@@ -38,9 +39,9 @@ internal constructor(
         }
 
         // And return the packaged asset if available
-        return name.json().takeIf { it.isAsset(context) }?.let {
+        return assetManager.open(name.json())?.use {
             logger.debug("Loading bundled asset $name in the mean time")
-            readJson(Scanner(context.assets.open(name.json())))
+            readJson(Scanner(it))
         }
     }
 

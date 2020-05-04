@@ -3,7 +3,6 @@ package com.stripe.android.view
 import android.content.Context
 import android.os.Parcelable
 import android.util.Log
-import com.stripe.android.Logger
 import com.stripe.android.StripeResourceManager
 import com.stripe.android.model.StripeJsonUtils
 import kotlinx.android.parcel.Parcelize
