@@ -110,7 +110,7 @@ dependencies {
     androidTestImplementation "androidx.test.espresso:espresso-idling-resource:$espressoVersion"
 
     androidTestUtil "androidx.test:orchestrator:$androidTestVersion"
-    compile(name:"alipaySdk-15.7.5", ext:"aar")
+    implementation(name: "alipaySdk-15.7.5", ext: "aar")
 }
 
 
