@@ -50,15 +50,9 @@ import org.robolectric.RobolectricTestRunner
 @RunWith(RobolectricTestRunner::class)
 class StripeApiRepositoryTest {
 
-    private val context: Context by lazy {
-        ApplicationProvider.getApplicationContext<Context>()
-    }
-    private val stripeApiRepository: StripeApiRepository by lazy {
-        StripeApiRepository(context)
-    }
-    private val fileFactory: FileFactory by lazy {
-        FileFactory(context)
-    }
+    private val context = ApplicationProvider.getApplicationContext<Context>()
+    private val stripeApiRepository = StripeApiRepository(context)
+    private val fileFactory = FileFactory(context)
 
     private val stripeApiRequestExecutor: ApiRequestExecutor = mock()
     private val fireAndForgetRequestExecutor: FireAndForgetRequestExecutor = mock()
@@ -413,6 +407,51 @@ class StripeApiRepositoryTest {
         assertNotNull(source)
 
         verifyFingerprintAndAnalyticsRequests(AnalyticsEvent.SourceCreate)
+    }
+
+    @Test
+    fun createSource_whenAdvancedFraudSignalsEnabled_doesMakeFingerprintRequest() {
+        val stripeApiRepository = StripeApiRepository(
+            context,
+            stripeApiRequestExecutor = ApiRequestExecutor.Default(),
+            fireAndForgetRequestExecutor = fireAndForgetRequestExecutor
+        )
+        stripeApiRepository.createSource(
+            SourceParams.createCardParams(CARD),
+            ApiRequest.Options(ApiKeyFixtures.DEFAULT_PUBLISHABLE_KEY)
+        )
+
+        verify(fireAndForgetRequestExecutor, times(2))
+            .executeAsync(stripeRequestArgumentCaptor.capture())
+
+        assertEquals(
+            1,
+            stripeRequestArgumentCaptor.allValues.count { it is FingerprintRequest }
+        )
+    }
+
+    @Test
+    fun createSource_whenAdvancedFraudSignalsDisabled_doesNotMakeFingerprintRequest() {
+        Stripe.advancedFraudSignalsEnabled = false
+
+        val stripeApiRepository = StripeApiRepository(
+            context,
+            stripeApiRequestExecutor = ApiRequestExecutor.Default(),
+            fireAndForgetRequestExecutor = fireAndForgetRequestExecutor
+        )
+        stripeApiRepository.createSource(
+            SourceParams.createCardParams(CARD),
+            ApiRequest.Options(ApiKeyFixtures.DEFAULT_PUBLISHABLE_KEY)
+        )
+
+        verify(fireAndForgetRequestExecutor, times(1))
+            .executeAsync(stripeRequestArgumentCaptor.capture())
+
+        assertTrue(
+            stripeRequestArgumentCaptor.allValues.none { it is FingerprintRequest }
+        )
+
+        Stripe.advancedFraudSignalsEnabled = true
     }
 
     @Test

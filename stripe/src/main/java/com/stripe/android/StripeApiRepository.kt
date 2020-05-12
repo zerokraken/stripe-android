@@ -977,7 +977,9 @@ internal class StripeApiRepository @JvmOverloads internal constructor(
     }
 
     private fun fireFingerprintRequest() {
-        makeFireAndForgetRequest(fingerprintRequestFactory.create())
+        if (Stripe.advancedFraudSignalsEnabled) {
+            makeFireAndForgetRequest(fingerprintRequestFactory.create())
+        }
     }
 
     private fun fireAnalyticsRequest(
