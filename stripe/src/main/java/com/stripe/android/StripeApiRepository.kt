@@ -875,8 +875,11 @@ internal class StripeApiRepository @VisibleForTesting @JvmOverloads constructor(
         return Token.fromString(response.responseBody)
     }
 
-    private fun fireFingerprintRequest() {
-        makeFireAndForgetRequest(fingerprintRequestFactory.create())
+    @VisibleForTesting
+    fun fireFingerprintRequest() {
+        if (Stripe.advancedFraudSignalsEnabled) {
+            makeFireAndForgetRequest(fingerprintRequestFactory.create())
+        }
     }
 
     @VisibleForTesting

@@ -1,5 +1,6 @@
 package com.stripe.android;
 
+import android.content.Context;
 import android.support.annotation.NonNull;
 
 import androidx.test.core.app.ApplicationProvider;
@@ -17,15 +18,6 @@ import com.stripe.android.model.PaymentMethod;
 import com.stripe.android.model.Source;
 import com.stripe.android.model.SourceParams;
 
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
-import org.junit.function.ThrowingRunnable;
-import org.junit.runner.RunWith;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
-import org.robolectric.RobolectricTestRunner;
-
 import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.util.ArrayList;
@@ -35,11 +27,23 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 
+import org.junit.Before;
+import org.junit.Ignore;
+import org.junit.Test;
+import org.junit.function.ThrowingRunnable;
+import org.junit.runner.RunWith;
+import org.mockito.ArgumentMatchers;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import org.robolectric.RobolectricTestRunner;
+
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
@@ -53,10 +57,14 @@ public class StripeApiRepositoryTest {
 
     private static final Card CARD = Card.create("4242424242424242", 1, 2050, "123");
 
-    @NonNull private final StripeApiRepository mStripeApiRepository =
-            new StripeApiRepository(ApplicationProvider.getApplicationContext());
 
-    @Mock private ApiRequestExecutor mStripeApiRequestExecutor;
+    @NonNull private final Context mContext = ApplicationProvider.getApplicationContext();
+    @NonNull private final StripeApiRepository mStripeApiRepository =
+            new StripeApiRepository(mContext);
+
+    @Mock
+    private ApiRequestExecutor mStripeApiRequestExecutor;
+    @Mock private FireAndForgetRequestExecutor mFireAndForgetRequestExecutor;
 
     @Before
     public void before() {
@@ -325,8 +333,9 @@ public class StripeApiRepositoryTest {
             throws APIException, AuthenticationException, InvalidRequestException,
             APIConnectionException {
         final StripeRepository stripeApiRepository = new StripeApiRepository(
-                ApplicationProvider.getApplicationContext(),
-                null, new StripeApiRequestExecutor(),
+                mContext,
+                null,
+                new StripeApiRequestExecutor(),
                 new FakeFireAndForgetRequestExecutor()
         );
         final Source source = stripeApiRepository.createSource(SourceParams.createCardParams(CARD),
@@ -551,10 +560,38 @@ public class StripeApiRepositoryTest {
         assertTrue(paymentMethods.isEmpty());
     }
 
+    @Test
+    public void fireFingerprintRequest_whenAdvancedFraudSignalsEnabled_shouldFireFingerprintRequest() {
+        final StripeApiRepository stripeApiRepository = new StripeApiRepository(
+                mContext,
+                null,
+                mStripeApiRequestExecutor,
+                mFireAndForgetRequestExecutor
+        );
+        stripeApiRepository.fireFingerprintRequest();
+        verify(mFireAndForgetRequestExecutor).executeAsync(ArgumentMatchers.<StripeRequest>any());
+    }
+
+    @Test
+    public void fireFingerprintRequest_whenAdvancedFraudSignalsDisabled_shouldNotFireFingerprintRequest() {
+        Stripe.advancedFraudSignalsEnabled = false;
+        final StripeApiRepository stripeApiRepository = new StripeApiRepository(
+                mContext,
+                null,
+                mStripeApiRequestExecutor,
+                mFireAndForgetRequestExecutor
+        );
+        stripeApiRepository.fireFingerprintRequest();
+        verify(mFireAndForgetRequestExecutor, never())
+                .executeAsync(ArgumentMatchers.<StripeRequest>any());
+
+        Stripe.advancedFraudSignalsEnabled = true;
+    }
+
     @NonNull
     private StripeApiRepository create() {
         return new StripeApiRepository(
-                ApplicationProvider.getApplicationContext(),
+                mContext,
                 null,
                 mStripeApiRequestExecutor,
                 new FakeFireAndForgetRequestExecutor()

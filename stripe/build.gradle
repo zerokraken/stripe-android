@@ -1,9 +1,16 @@
-apply plugin: 'com.android.library'
-apply plugin: 'kotlin-android'
-apply plugin: 'kotlin-android-extensions'
-apply plugin: 'checkstyle'
-// make sure this line comes *after* you apply the Android plugin
-apply plugin: 'com.getkeepsafe.dexcount'
+plugins {
+    id 'com.android.library'
+    id 'kotlin-android'
+    id 'kotlin-android-extensions'
+    id 'checkstyle'
+
+    // make sure this line comes *after* you apply the Android plugin
+    id 'com.getkeepsafe.dexcount'
+
+    id 'maven'
+    id 'signing'
+    id 'maven-publish'
+}
 
 assemble.dependsOn('lint')
 check.dependsOn('checkstyle')
@@ -20,7 +27,7 @@ dependencies {
     // Api for this import because we use reflection to alter TextInputLayout
     api "com.android.support:design:28.0.0"
 
-    implementation "com.stripe:stripe-3ds2-android:1.2.2"
+    implementation "com.stripe:stripe-3ds2-android:1.3.1"
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlinVersion"
 
     javadocDeps "com.android.support:support-annotations:28.0.0"
@@ -28,9 +35,9 @@ dependencies {
     javadocDeps "com.android.support:design:28.0.0"
     compileOnly "javax.annotation:jsr250-api:${rootProject.ext.javaAnnotationVersion}"
 
-    testImplementation 'junit:junit:4.13-beta-3'
-    testImplementation "org.mockito:mockito-core:3.0.0"
-    testImplementation 'org.robolectric:robolectric:4.3'
+    testImplementation 'junit:junit:4.13'
+    testImplementation "org.mockito:mockito-core:3.3.3"
+    testImplementation 'org.robolectric:robolectric:4.3.1'
     testImplementation 'androidx.test:core:1.2.0'
     testImplementation 'org.json:json:20190722'
 
@@ -39,7 +46,7 @@ dependencies {
     androidTestImplementation 'androidx.test:runner:1.2.0'
     androidTestUtil 'androidx.test:orchestrator:1.2.0'
 
-    ktlint 'com.pinterest:ktlint:0.34.2'
+    ktlint 'com.pinterest:ktlint:0.36.0'
 }
 
 android {
@@ -59,6 +66,9 @@ android {
             res.srcDirs = ['res']
             assets.srcDirs = ['assets']
         }
+        main.kotlin.srcDirs += 'src/main/java'
+        main.java.srcDirs += 'src/main/java'
+
         test {
 
         }
@@ -70,6 +80,10 @@ android {
         }
     }
     productFlavors {
+    }
+
+    lintOptions {
+        lintConfig file("../settings/lint.xml")
     }
 }
 

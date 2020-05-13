@@ -52,6 +52,18 @@ public class Stripe {
 
     @Nullable private static AppInfo sAppInfo;
 
+    /**
+     * [advancedFraudSignalsEnabled] determines whether additional device data is sent to Stripe
+     * for fraud prevention. By default, this property is set to `true`.
+     *
+     * Disabling this setting will reduce Stripe's ability to protect your business from
+     * fraudulent payments.
+     *
+     * For more details on the information we collect, visit
+     * [https://stripe.com/docs/disputes/prevention/advanced-fraud-detection](https://stripe.com/docs/disputes/prevention/advanced-fraud-detection)
+     */
+    public static boolean advancedFraudSignalsEnabled = true;
+
     @NonNull private final StripeRepository mStripeRepository;
     @NonNull private final StripeNetworkUtils mStripeNetworkUtils;
     @NonNull private final PaymentController mPaymentController;
