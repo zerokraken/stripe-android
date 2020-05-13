@@ -29,6 +29,9 @@ allprojects {
     repositories {
         google()
         jcenter()
+        flatDir {
+            dirs 'libs'
+        }
     }
 
     task checkstyle(type: Checkstyle) {

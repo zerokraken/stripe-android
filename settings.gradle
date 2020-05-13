@@ -1,2 +1,2 @@
-include ':stripe'
+include ':stripe', ':alipaySdk-15.7.5'
 include ':example'
