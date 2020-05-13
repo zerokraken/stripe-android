@@ -23,4 +23,19 @@ sealed class PaymentMethodOptionsParams(
             private const val PARAM_CVC = "cvc"
         }
     }
+
+    @Parcelize
+    data class Alipay(
+        val appBundleId: String,
+        val appVersionKey: String
+    ) : PaymentMethodOptionsParams(PaymentMethod.Type.Alipay) {
+        override fun toParamMap(): Map<String, Any> {
+            return mapOf(type.code to
+                mapOf(
+                    "app_bundle_id" to appBundleId,
+                    "app_version_key" to appVersionKey
+                )
+            )
+        }
+    }
 }

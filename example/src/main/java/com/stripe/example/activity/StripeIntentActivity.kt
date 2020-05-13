@@ -86,20 +86,21 @@ abstract class StripeIntentActivity : AppCompatActivity() {
                 "\n\nStarting PaymentIntent confirmation" + (stripeAccountId?.let {
                 " for $it"
             } ?: ""))
-        val confirmPaymentIntentParams = if (existingPaymentMethodId == null) {
-            ConfirmPaymentIntentParams.createWithPaymentMethodCreateParams(
-                paymentMethodCreateParams = requireNotNull(params),
-                clientSecret = secret,
-                shipping = shippingDetails,
-                returnUrl = returnUrl
-            )
-        } else {
-            ConfirmPaymentIntentParams.createWithPaymentMethodId(
-                paymentMethodId = existingPaymentMethodId,
-                clientSecret = secret,
-                mandateData = mandateDataParams
-            )
-        }
+//        val confirmPaymentIntentParams = if (existingPaymentMethodId == null) {
+//            ConfirmPaymentIntentParams.createWithPaymentMethodCreateParams(
+//                paymentMethodCreateParams = requireNotNull(params),
+//                clientSecret = secret,
+//                shipping = shippingDetails,
+//                returnUrl = returnUrl
+//            )
+//        } else {
+//            ConfirmPaymentIntentParams.createWithPaymentMethodId(
+//                paymentMethodId = existingPaymentMethodId,
+//                clientSecret = secret,
+//                mandateData = mandateDataParams
+//            )
+//        }
+        val confirmPaymentIntentParams = ConfirmPaymentIntentParams.createAlipay(this, secret, returnUrl="example://return_url")
         stripe.confirmPayment(this, confirmPaymentIntentParams, stripeAccountId)
     }
 

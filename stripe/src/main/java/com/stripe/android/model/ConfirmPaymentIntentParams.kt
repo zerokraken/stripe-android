@@ -1,5 +1,6 @@
 package com.stripe.android.model
 
+import android.content.Context
 import android.os.Parcelable
 import com.stripe.android.model.ConfirmPaymentIntentParams.SetupFutureUsage
 import com.stripe.android.model.ConfirmPaymentIntentParams.Shipping
@@ -10,6 +11,7 @@ import com.stripe.android.model.ConfirmStripeIntentParams.Companion.PARAM_PAYMEN
 import com.stripe.android.model.ConfirmStripeIntentParams.Companion.PARAM_RETURN_URL
 import com.stripe.android.model.ConfirmStripeIntentParams.Companion.PARAM_USE_STRIPE_SDK
 import kotlinx.android.parcel.Parcelize
+
 
 /**
  * Model representing parameters for [confirming a PaymentIntent](https://stripe.com/docs/api/payment_intents/confirm).
@@ -413,6 +415,24 @@ data class ConfirmPaymentIntentParams internal constructor(
                 mandateData = mandateData,
                 setupFutureUsage = setupFutureUsage,
                 shipping = shipping
+            )
+        }
+
+        @JvmStatic
+        fun createAlipay(
+            context: Context,
+            clientSecret: String,
+            returnUrl: String
+        ): ConfirmPaymentIntentParams {
+            val packageName = context.packageName
+            val packageInfo = context.packageManager.getPackageInfo(packageName, 0)
+            val version = packageInfo.versionName
+            val options = PaymentMethodOptionsParams.Alipay(packageName, version)
+            return ConfirmPaymentIntentParams(
+                clientSecret = clientSecret,
+                paymentMethodCreateParams = PaymentMethodCreateParams.createAlipay(),
+                paymentMethodOptions = options,
+                returnUrl = returnUrl
             )
         }
 
