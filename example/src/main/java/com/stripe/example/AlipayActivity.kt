@@ -17,7 +17,7 @@ import com.stripe.example.databinding.ActivityAlipayBinding
 
 
 
-class AlipayActivity : AppCompatActivity() {
+class AlipayActivity : StripeIntentActivity() {
     private val stripeAccountId: String? by lazy {
         Settings(this).stripeAccountId
     }
@@ -32,7 +32,7 @@ class AlipayActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(viewBinding.root)
 
-//        viewModel.status.observe(this, Observer(viewBinding.status::setText))
+        viewModel.status.observe(this, Observer(viewBinding.status::setText))
 
         viewBinding.payNow.setOnClickListener {
 //            viewBinding.status.append("creating source\n")
@@ -58,19 +58,7 @@ class AlipayActivity : AppCompatActivity() {
 //                    }
 //                }
 //            )
-            val params = PaymentMethodCreateParams.createAlipay()
-            viewBinding.status.text = "creating payment method\n"
-            stripe.createPaymentMethod(params, callback = object : ApiResultCallback<PaymentMethod> {
-                override fun onSuccess(result: PaymentMethod) {
-                    viewBinding.status.append("Created payment method of type ${result.type}\n")
-                }
-
-                override fun onError(e: Exception) {
-                    viewBinding.status.append("Failed to create payment method\n")
-                    viewBinding.status.append("${e.message}\n")
-                }
-
-            })
+            createAndConfirmPaymentIntent("cn", PaymentMethodCreateParams.createAlipay())
         }
     }
 
