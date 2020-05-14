@@ -85,7 +85,7 @@ class StripeApiHandler {
     void logApiCall(
             @NonNull Map<String, Object> loggingMap,
             @NonNull String publishableKey) {
-        if (mShouldLogRequest) {
+        if (mShouldLogRequest && Stripe.advancedFraudSignalsEnabled) {
             makeFireAndForgetRequest(
                     ApiRequest.createAnalyticsRequest(loggingMap,
                             ApiRequest.Options.create(publishableKey), mAppInfo));

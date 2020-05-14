@@ -19,7 +19,6 @@ import com.stripe.android.model.Stripe3ds2Fingerprint;
 import com.stripe.android.stripe3ds2.service.StripeThreeDs2Service;
 import com.stripe.android.stripe3ds2.transaction.MessageVersionRegistry;
 import com.stripe.android.stripe3ds2.transaction.Transaction;
-import com.stripe.android.stripe3ds2.views.ChallengeProgressDialogActivity;
 import com.stripe.android.view.ActivityStarter;
 import com.stripe.android.view.StripeIntentResultExtras;
 
@@ -71,6 +70,8 @@ public class PaymentControllerTest {
     @Mock private ApiResultCallback<PaymentIntentResult> mPaymentAuthResultCallback;
     @Mock private ApiResultCallback<SetupIntentResult> mSetupAuthResultCallback;
     @Mock private PaymentRelayStarter mPaymentRelayStarter;
+    @Mock private PaymentController.ChallengeProgressDialogActivityStarter
+            mChallengeProgressDialogActivityStarter;
 
     @Captor private ArgumentCaptor<PaymentRelayStarter.Data> mRelayStarterDataArgumentCaptor;
     @Captor private ArgumentCaptor<Intent> mIntentArgumentCaptor;
@@ -88,7 +89,9 @@ public class PaymentControllerTest {
                 mThreeDs2Service,
                 mApiHandler,
                 mMessageVersionRegistry,
-                CONFIG);
+                CONFIG,
+                mChallengeProgressDialogActivityStarter
+        );
     }
 
     @Test
@@ -110,10 +113,10 @@ public class PaymentControllerTest {
                 eq(PUBLISHABLE_KEY),
                 ArgumentMatchers.<ApiResultCallback<Stripe3ds2AuthResult>>any());
 
-        verify(mActivity).startActivity(eq(
-                new Intent(mActivity, ChallengeProgressDialogActivity.class)
-                        .putExtra(ChallengeProgressDialogActivity.EXTRA_DIRECTORY_SERVER_NAME,
-                                Stripe3ds2Fingerprint.DirectoryServer.Visa.name)));
+        verify(mChallengeProgressDialogActivityStarter).start(
+                mActivity,
+                Stripe3ds2Fingerprint.DirectoryServer.Visa.name
+        );
     }
 
     @Test
@@ -135,10 +138,10 @@ public class PaymentControllerTest {
                 eq(PUBLISHABLE_KEY),
                 ArgumentMatchers.<ApiResultCallback<Stripe3ds2AuthResult>>any());
 
-        verify(mActivity).startActivity(eq(
-                new Intent(mActivity, ChallengeProgressDialogActivity.class)
-                        .putExtra(ChallengeProgressDialogActivity.EXTRA_DIRECTORY_SERVER_NAME,
-                                Stripe3ds2Fingerprint.DirectoryServer.Amex.name)));
+        verify(mChallengeProgressDialogActivityStarter).start(
+                mActivity,
+                Stripe3ds2Fingerprint.DirectoryServer.Amex.name
+        );
     }
 
     @Test
@@ -207,7 +210,7 @@ public class PaymentControllerTest {
         new PaymentController.PaymentAuth3ds2ChallengeStatusReceiver(mActivity,
                 m3ds2Starter, mApiHandler, PaymentIntentFixtures.PI_REQUIRES_VISA_3DS2,
                 "src_123", ApiKeyFixtures.FAKE_PUBLISHABLE_KEY)
-                .cancelled();
+                .cancelled("01");
         verify(mApiHandler).complete3ds2Auth(eq("src_123"),
                 eq(ApiKeyFixtures.FAKE_PUBLISHABLE_KEY),
                 ArgumentMatchers.<ApiResultCallback<Boolean>>any());

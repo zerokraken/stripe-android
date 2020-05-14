@@ -47,32 +47,47 @@ class PaymentController {
     static final int PAYMENT_REQUEST_CODE = 50000;
     static final int SETUP_REQUEST_CODE = 50001;
 
-
-    @NonNull private final StripeThreeDs2Service mThreeDs2Service;
-    @NonNull private final StripeApiHandler mApiHandler;
-    @NonNull private final MessageVersionRegistry mMessageVersionRegistry;
-    @NonNull private final PaymentAuthConfig mConfig;
-    @NonNull private final ApiKeyValidator mApiKeyValidator;
+    @NonNull
+    private final StripeThreeDs2Service mThreeDs2Service;
+    @NonNull
+    private final StripeApiHandler mApiHandler;
+    @NonNull
+    private final MessageVersionRegistry mMessageVersionRegistry;
+    @NonNull
+    private final PaymentAuthConfig mConfig;
+    @NonNull
+    private final ApiKeyValidator mApiKeyValidator;
+    @NonNull
+    private final ChallengeProgressDialogActivityStarter mChallengeProgressDialogActivityStarter;
 
     PaymentController(@NonNull Context context,
                       @NonNull StripeApiHandler apiHandler) {
-        this(context, new StripeThreeDs2ServiceImpl(context), apiHandler,
+        this(
+                context,
+                new StripeThreeDs2ServiceImpl(context),
+                apiHandler,
                 new MessageVersionRegistry(),
-                PaymentAuthConfig.get());
+                PaymentAuthConfig.get(),
+                new ChallengeProgressDialogActivityStarter.Default()
+        );
     }
 
     @VisibleForTesting
-    PaymentController(@NonNull Context context,
-                      @NonNull StripeThreeDs2Service threeDs2Service,
-                      @NonNull StripeApiHandler apiHandler,
-                      @NonNull MessageVersionRegistry messageVersionRegistry,
-                      @NonNull PaymentAuthConfig config) {
+    PaymentController(
+            @NonNull Context context,
+            @NonNull StripeThreeDs2Service threeDs2Service,
+            @NonNull StripeApiHandler apiHandler,
+            @NonNull MessageVersionRegistry messageVersionRegistry,
+            @NonNull PaymentAuthConfig config,
+            @NonNull ChallengeProgressDialogActivityStarter challengeProgressDialogActivityStarter
+    ) {
         mConfig = config;
         mThreeDs2Service = threeDs2Service;
         mThreeDs2Service.initialize(context, new StripeConfigParameters(), null,
                 config.stripe3ds2Config.uiCustomization.getUiCustomization());
         mApiHandler = apiHandler;
         mMessageVersionRegistry = messageVersionRegistry;
+        mChallengeProgressDialogActivityStarter = challengeProgressDialogActivityStarter;
         mApiKeyValidator = new ApiKeyValidator();
     }
 
@@ -289,7 +304,10 @@ class PaymentController {
                         mMessageVersionRegistry.getCurrent(), false,
                         stripe3ds2Fingerprint.directoryServer.name);
 
-        ChallengeProgressDialogActivity.show(activity, stripe3ds2Fingerprint.directoryServer.name);
+        mChallengeProgressDialogActivityStarter.start(
+                activity,
+                stripe3ds2Fingerprint.directoryServer.name
+        );
 
         final AuthenticationRequestParameters areqParams =
                 transaction.getAuthenticationRequestParameters();
@@ -577,22 +595,25 @@ class PaymentController {
         }
 
         @Override
-        public void completed(@NonNull CompletionEvent completionEvent) {
-            super.completed(completionEvent);
+        public void completed(
+                @NonNull CompletionEvent completionEvent,
+                @NonNull String uiTypeCode
+        ) {
+            super.completed(completionEvent, uiTypeCode);
             notifyCompletion(Stripe3ds2CompletionStarter.StartData.createForComplete(mStripeIntent,
                     completionEvent.getTransactionStatus()));
         }
 
         @Override
-        public void cancelled() {
-            super.cancelled();
+        public void cancelled(@NonNull String uiTypeCode) {
+            super.cancelled(uiTypeCode);
             notifyCompletion(new Stripe3ds2CompletionStarter.StartData(mStripeIntent,
                     Stripe3ds2CompletionStarter.ChallengeFlowOutcome.CANCEL));
         }
 
         @Override
-        public void timedout() {
-            super.timedout();
+        public void timedout(@NonNull String uiTypeCode) {
+            super.timedout(uiTypeCode);
             notifyCompletion(new Stripe3ds2CompletionStarter.StartData(mStripeIntent,
                     Stripe3ds2CompletionStarter.ChallengeFlowOutcome.TIMEOUT));
         }
@@ -628,6 +649,26 @@ class PaymentController {
                             }
                         }
                     });
+        }
+    }
+
+    interface ChallengeProgressDialogActivityStarter {
+        void start(
+                @NonNull Activity activity,
+                @NonNull String directoryServerName
+        );
+
+        class Default implements ChallengeProgressDialogActivityStarter {
+            @Override
+            public void start(
+                    @NonNull Activity activity,
+                    @NonNull String directoryServerName
+            ) {
+                ChallengeProgressDialogActivity.show(
+                        activity,
+                        directoryServerName
+                );
+            }
         }
     }
 }

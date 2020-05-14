@@ -1,3 +1,8 @@
 -keep class android.support.design.widget.TextInputLayout { *; }
 -keep class android.support.design.widget.CollapsingTextHelper { *; }
 -dontwarn com.stripe.android.view.**
+
+# Rules for BouncyCastle
+-keep class org.bouncycastle.jcajce.provider.** { *; }
+-keep class org.bouncycastle.jce.provider.** { *; }
+-keep class !org.bouncycastle.jce.provider.X509LDAPCertStoreSpi { *; }

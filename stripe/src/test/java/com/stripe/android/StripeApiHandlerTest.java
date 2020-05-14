@@ -341,9 +341,24 @@ public class StripeApiHandlerTest {
                 ApplicationProvider.getApplicationContext(),
                 mRequestExecutor,
                 false,
-                null);
+                null
+        );
         apiHandler.logApiCall(new HashMap<String, Object>(), ApiKeyFixtures.DEFAULT_PUBLISHABLE_KEY);
         verifyNoMoreInteractions(mRequestExecutor);
+    }
+
+    @Test
+    public void logApiCall_whenShouldLogRequestIsTrueAndAdvancedFraudSignalsDisabled_doesNotCreateAConnection() {
+        Stripe.advancedFraudSignalsEnabled = false;
+        final StripeApiHandler apiHandler = new StripeApiHandler(
+                ApplicationProvider.getApplicationContext(),
+                mRequestExecutor,
+                false,
+                null
+        );
+        apiHandler.logApiCall(new HashMap<String, Object>(), ApiKeyFixtures.DEFAULT_PUBLISHABLE_KEY);
+        verifyNoMoreInteractions(mRequestExecutor);
+        Stripe.advancedFraudSignalsEnabled = false;
     }
 
     @Test
