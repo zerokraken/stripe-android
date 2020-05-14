@@ -1104,7 +1104,7 @@ public class StripeTest {
                 .setBrand("visa")
                 .setCountry("US")
                 .setExpiryMonth(12)
-                .setExpiryYear(2020)
+                .setExpiryYear(2021)
                 .setFunding("credit")
                 .setLast4("4242")
                 .setChecks(new PaymentMethod.Card.Checks.Builder()
