@@ -6,6 +6,7 @@ import com.nhaarman.mockitokotlin2.KArgumentCaptor
 import com.nhaarman.mockitokotlin2.any
 import com.nhaarman.mockitokotlin2.argThat
 import com.nhaarman.mockitokotlin2.argumentCaptor
+import com.nhaarman.mockitokotlin2.mock
 import com.nhaarman.mockitokotlin2.verify
 import com.nhaarman.mockitokotlin2.verifyNoMoreInteractions
 import com.stripe.android.exception.APIConnectionException
@@ -21,7 +22,6 @@ import java.net.HttpURLConnection
 import java.net.UnknownHostException
 import java.util.Locale
 import java.util.UUID
-import kotlin.test.BeforeTest
 import kotlin.test.Ignore
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -29,10 +29,8 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 import org.junit.runner.RunWith
-import org.mockito.Mock
 import org.mockito.Mockito.`when`
 import org.mockito.Mockito.times
-import org.mockito.MockitoAnnotations
 import org.robolectric.RobolectricTestRunner
 
 /**
@@ -41,27 +39,14 @@ import org.robolectric.RobolectricTestRunner
 @RunWith(RobolectricTestRunner::class)
 class StripeApiRepositoryTest {
 
-    private val context: Context by lazy {
-        ApplicationProvider.getApplicationContext<Context>()
-    }
+    private val context = ApplicationProvider.getApplicationContext<Context>()
     private val stripeApiRepository = StripeApiRepository(context)
 
-    @Mock
-    private lateinit var stripeApiRequestExecutor: ApiRequestExecutor
-    @Mock
-    private lateinit var fireAndForgetRequestExecutor: FireAndForgetRequestExecutor
+    private val stripeApiRequestExecutor: ApiRequestExecutor = mock()
+    private val fireAndForgetRequestExecutor: FireAndForgetRequestExecutor = mock()
 
-    private val apiRequestArgumentCaptor: KArgumentCaptor<ApiRequest> by lazy {
-        argumentCaptor<ApiRequest>()
-    }
-    private val stripeRequestArgumentCaptor: KArgumentCaptor<StripeRequest> by lazy {
-        argumentCaptor<StripeRequest>()
-    }
-
-    @BeforeTest
-    fun before() {
-        MockitoAnnotations.initMocks(this)
-    }
+    private val apiRequestArgumentCaptor: KArgumentCaptor<ApiRequest> = argumentCaptor()
+    private val stripeRequestArgumentCaptor: KArgumentCaptor<StripeRequest> = argumentCaptor()
 
     @Test
     fun testGetApiUrl() {
@@ -336,7 +321,7 @@ class StripeApiRepositoryTest {
     @Test
     fun createSource_withNonLoggingListener_doesNotLogButDoesCreateSource() {
         val stripeApiRepository = StripeApiRepository(
-            ApplicationProvider.getApplicationContext<Context>(),
+            context,
             stripeApiRequestExecutor = StripeApiRequestExecutor(),
             fireAndForgetRequestExecutor = FakeFireAndForgetRequestExecutor()
         )
@@ -345,6 +330,51 @@ class StripeApiRepositoryTest {
 
         // Check that we get a token back; we don't care about its fields for this test.
         assertNotNull(source)
+    }
+
+    @Test
+    fun createSource_whenAdvancedFraudSignalsEnabled_doesMakeFingerprintRequest() {
+        val stripeApiRepository = StripeApiRepository(
+            context,
+            stripeApiRequestExecutor = StripeApiRequestExecutor(),
+            fireAndForgetRequestExecutor = fireAndForgetRequestExecutor
+        )
+        stripeApiRepository.createSource(
+            SourceParams.createCardParams(CARD),
+            ApiRequest.Options(ApiKeyFixtures.DEFAULT_PUBLISHABLE_KEY)
+        )
+
+        verify(fireAndForgetRequestExecutor, times(2))
+            .executeAsync(stripeRequestArgumentCaptor.capture())
+
+        assertEquals(
+            1,
+            stripeRequestArgumentCaptor.allValues.count { it is FingerprintRequest }
+        )
+    }
+
+    @Test
+    fun createSource_whenAdvancedFraudSignalsDisabled_doesNotMakeFingerprintRequest() {
+        Stripe.advancedFraudSignalsEnabled = false
+
+        val stripeApiRepository = StripeApiRepository(
+            context,
+            stripeApiRequestExecutor = StripeApiRequestExecutor(),
+            fireAndForgetRequestExecutor = fireAndForgetRequestExecutor
+        )
+        stripeApiRepository.createSource(
+            SourceParams.createCardParams(CARD),
+            ApiRequest.Options(ApiKeyFixtures.DEFAULT_PUBLISHABLE_KEY)
+        )
+
+        verify(fireAndForgetRequestExecutor, times(1))
+            .executeAsync(stripeRequestArgumentCaptor.capture())
+
+        assertTrue(
+            stripeRequestArgumentCaptor.allValues.none { it is FingerprintRequest }
+        )
+
+        Stripe.advancedFraudSignalsEnabled = true
     }
 
     @Test
@@ -597,7 +627,7 @@ class StripeApiRepositoryTest {
 
     private fun create(): StripeApiRepository {
         return StripeApiRepository(
-            ApplicationProvider.getApplicationContext<Context>(),
+            context,
             stripeApiRequestExecutor = stripeApiRequestExecutor,
             fireAndForgetRequestExecutor = fireAndForgetRequestExecutor,
             networkUtils = StripeNetworkUtils(
