@@ -12,7 +12,6 @@ import com.stripe.android.model.ConfirmStripeIntentParams.Companion.PARAM_RETURN
 import com.stripe.android.model.ConfirmStripeIntentParams.Companion.PARAM_USE_STRIPE_SDK
 import kotlinx.android.parcel.Parcelize
 
-
 /**
  * Model representing parameters for [confirming a PaymentIntent](https://stripe.com/docs/api/payment_intents/confirm).
  */
@@ -431,7 +430,7 @@ data class ConfirmPaymentIntentParams internal constructor(
             return ConfirmPaymentIntentParams(
                 clientSecret = clientSecret,
                 paymentMethodCreateParams = PaymentMethodCreateParams.createAlipay(),
-                paymentMethodOptions = options,
+//                paymentMethodOptions = options,
                 returnUrl = returnUrl
             )
         }

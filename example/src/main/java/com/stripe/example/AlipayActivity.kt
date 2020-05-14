@@ -3,18 +3,15 @@ package com.stripe.example
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
-import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.Observer
+import com.alipay.sdk.app.PayTask
 import com.stripe.android.ApiResultCallback
 import com.stripe.android.Stripe
-import com.stripe.android.model.PaymentMethod
 import com.stripe.android.model.PaymentMethodCreateParams
 import com.stripe.android.model.Source
 import com.stripe.android.model.SourceParams.Companion.createAlipaySingleUseParams
 import com.stripe.example.activity.StripeIntentActivity
 import com.stripe.example.databinding.ActivityAlipayBinding
-
 
 
 class AlipayActivity : StripeIntentActivity() {
@@ -26,6 +23,13 @@ class AlipayActivity : StripeIntentActivity() {
     }
     private val viewBinding: ActivityAlipayBinding by lazy {
         ActivityAlipayBinding.inflate(layoutInflater)
+    }
+
+    fun getRandomString(length: Int) : String {
+        val allowedChars = ('A'..'Z') + ('a'..'z')
+        return (1..length)
+            .map { allowedChars.random() }
+            .joinToString("")
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -45,7 +49,7 @@ class AlipayActivity : StripeIntentActivity() {
 //
 //            stripe.createSource(
 //                alipaySingleUseParams,
-//                "some_unique_key_2",
+//                getRandomString(20),
 //                callback = object : ApiResultCallback<Source> {
 //                    override fun onSuccess(result: Source) {
 //                        viewBinding.status.append("creating source succeeded\n")
