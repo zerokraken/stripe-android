@@ -39,6 +39,8 @@ class AlipayActivity : StripeIntentActivity() {
         viewModel.status.observe(this, Observer(viewBinding.status::setText))
 
         viewBinding.payNow.setOnClickListener {
+            val task = PayTask(this)
+            task.payV2("some_str", true)
 //            viewBinding.status.append("creating source\n")
 //            val alipaySingleUseParams = createAlipaySingleUseParams(
 //                50L,  // Amount is a long int in the lowest denomination. 50 cents in USD is the minimum
