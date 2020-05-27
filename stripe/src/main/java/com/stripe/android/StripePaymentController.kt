@@ -311,6 +311,7 @@ internal class StripePaymentController internal constructor(
         AlipayAuthenticationTask(
             intent,
             authenticator,
+            logger,
             object : ApiResultCallback<Int> {
                 override fun onSuccess(result: Int) {
                     val requestOptions = ApiRequest.Options(
@@ -338,12 +339,14 @@ internal class StripePaymentController internal constructor(
     internal class AlipayAuthenticationTask(
         private val intent: StripeIntent,
         private val authenticator: AlipayAuthenticator,
+        private val logger: Logger,
         callback: ApiResultCallback<Int>
     ) : ApiOperation<Int>(callback = callback) {
         override suspend fun getResult(): Int? {
             val nextActionData = intent.nextActionData
             if (nextActionData is RedirectToUrl && nextActionData.mobileData is AlipayData) {
                 val output = authenticator.onAuthenticationRequest(nextActionData.mobileData.data)
+                logger.debug("Alipay SDK Result:\n$output")
                 return when (output[RESULT_FIELD]) {
                     RESULT_CODE_SUCCESS -> StripeIntentResult.Outcome.SUCCEEDED
                     RESULT_CODE_FAILED -> StripeIntentResult.Outcome.FAILED
@@ -390,6 +393,8 @@ internal class StripePaymentController internal constructor(
                         )
                     } else {
                         logger.debug("Dispatching PaymentIntentResult for ${result.id}")
+                        logger.debug("Outcome: $flowOutcome")
+                        logger.debug("PaymentIntent status: ${result.status}")
                         callback.onSuccess(
                             PaymentIntentResult(result, flowOutcome)
                         )

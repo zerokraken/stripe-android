@@ -71,6 +71,8 @@ dependencies {
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinCoroutinesVersion"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:$kotlinCoroutinesVersion"
 
+    compile(name:"alipaySdk-15.7.5", ext:"aar")
+
     ktlint "com.pinterest:ktlint:$ktlintVersion"
 
     testImplementation "androidx.test:core:$androidTestVersion"

@@ -33,7 +33,7 @@ abstract class StripeIntentActivity : AppCompatActivity() {
     private val stripeAccountId: String? by lazy {
         Settings(this).stripeAccountId
     }
-    private val stripe: Stripe by lazy {
+    internal val stripe: Stripe by lazy {
         StripeFactory(this, stripeAccountId).create()
     }
     private val keyboardController: KeyboardController by lazy {

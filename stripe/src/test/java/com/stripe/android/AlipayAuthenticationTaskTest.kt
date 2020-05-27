@@ -19,6 +19,7 @@ class AlipayAuthenticationTaskTest {
         val task = StripePaymentController.AlipayAuthenticationTask(
             intent,
             createAuthenticator("9000"),
+            Logger.noop(),
             callback
         )
         val result = runBlocking { task.getResult() }
@@ -30,6 +31,7 @@ class AlipayAuthenticationTaskTest {
         val task = StripePaymentController.AlipayAuthenticationTask(
             intent,
             createAuthenticator("6001"),
+            Logger.noop(),
             callback
         )
         val result = runBlocking { task.getResult() }
@@ -41,6 +43,7 @@ class AlipayAuthenticationTaskTest {
         val task = StripePaymentController.AlipayAuthenticationTask(
             intent,
             createAuthenticator("4000"),
+            Logger.noop(),
             callback
         )
         val result = runBlocking { task.getResult() }
@@ -52,6 +55,7 @@ class AlipayAuthenticationTaskTest {
         val task = StripePaymentController.AlipayAuthenticationTask(
             intent,
             createAuthenticator("unknown"),
+            Logger.noop(),
             callback
         )
         val result = runBlocking { task.getResult() }
@@ -63,6 +67,7 @@ class AlipayAuthenticationTaskTest {
         val task = StripePaymentController.AlipayAuthenticationTask(
             intent,
             createAuthenticator(null),
+            Logger.noop(),
             callback
         )
         val result = runBlocking { task.getResult() }
@@ -74,6 +79,7 @@ class AlipayAuthenticationTaskTest {
         val task = StripePaymentController.AlipayAuthenticationTask(
             PaymentIntentFixtures.PI_REQUIRES_REDIRECT,
             createAuthenticator("9000"),
+            Logger.noop(),
             callback
         )
         assertFailsWith<RuntimeException> {

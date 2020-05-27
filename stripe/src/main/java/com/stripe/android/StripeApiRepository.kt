@@ -950,6 +950,7 @@ internal class StripeApiRepository @JvmOverloads internal constructor(
         } catch (ex: IOException) {
             throw APIConnectionException.create(ex, apiRequest.baseUrl)
         }
+        logger.debug("Response:\n${response.responseJson.toString(2)}")
 
         if (response.isError) {
             handleApiError(response)
