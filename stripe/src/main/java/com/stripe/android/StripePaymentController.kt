@@ -32,6 +32,7 @@ import com.stripe.android.stripe3ds2.transaction.Transaction
 import com.stripe.android.stripe3ds2.views.ChallengeProgressDialogActivity
 import com.stripe.android.view.AuthActivityStarter
 import com.stripe.android.view.Stripe3ds2CompletionActivity
+import java.io.IOException
 import java.security.cert.CertificateException
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CoroutineScope
@@ -343,7 +344,11 @@ internal class StripePaymentController internal constructor(
         override suspend fun getResult(): Int? {
             val nextActionData = intent.nextActionData
             if (nextActionData is RedirectToUrl && nextActionData.mobileData is AlipayData) {
-                val output = authenticator.onAuthenticationRequest(nextActionData.mobileData.data)
+                val output = runCatching {
+                    authenticator.onAuthenticationRequest(nextActionData.mobileData.data)
+                }.getOrElse {
+                    throw IOException(it.message)
+                }
                 return when (output[RESULT_FIELD]) {
                     RESULT_CODE_SUCCESS -> StripeIntentResult.Outcome.SUCCEEDED
                     RESULT_CODE_FAILED -> StripeIntentResult.Outcome.FAILED
