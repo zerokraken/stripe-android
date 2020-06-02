@@ -20,37 +20,17 @@
             android:indeterminate="true"
             android:visibility="invisible" />
 
-        <com.google.android.material.textfield.TextInputLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="Fake SDK Result Code">
-
-            <com.google.android.material.textfield.TextInputEditText
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:id="@+id/result_code"
-                android:text="9000"
-                />
-
-        </com.google.android.material.textfield.TextInputLayout>
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/fake_button"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Confirm with Fake SDK" />
-
         <com.google.android.material.button.MaterialButton
             android:id="@+id/sdk_button"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Confirm with SDK" />
+            android:text="Pay with SDK" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/web_button"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Confirm with WebView" />
+            android:text="Pay with WebView" />
 
 
         <TextView

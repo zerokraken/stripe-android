@@ -31,19 +31,8 @@ class AlipayActivity : StripeIntentActivity() {
             viewBinding.progressBar.visibility = if (it) View.VISIBLE else View.INVISIBLE
         })
 
-        viewBinding.fakeButton.setOnClickListener {
-            confirmWithSdk(object : AlipayAuthenticator {
-                override fun onAuthenticationRequest(data: String): Map<String, String> {
-                    return mapOf("resultStatus" to viewBinding.resultCode.text.toString())
-                }
-            })
-        }
         viewBinding.sdkButton.setOnClickListener {
-            confirmWithSdk(object : AlipayAuthenticator {
-                override fun onAuthenticationRequest(data: String): Map<String, String> {
-                    return PayTask(this@AlipayActivity).payV2(data, true)
-                }
-            })
+            confirmWithSdk()
         }
 
         viewBinding.webButton.setOnClickListener {
@@ -51,7 +40,7 @@ class AlipayActivity : StripeIntentActivity() {
         }
     }
 
-    private fun confirmWithSdk(authenticator: AlipayAuthenticator) {
+    private fun confirmWithSdk() {
         viewModel.createPaymentIntent("sg").observe(this, Observer {
             it.fold(
                 onSuccess = {
@@ -60,7 +49,11 @@ class AlipayActivity : StripeIntentActivity() {
 
                     stripe.confirmAlipayPayment(
                         ConfirmPaymentIntentParams.createAlipay(secret, "example://return_url"),
-                        authenticator = authenticator,
+                        authenticator = object : AlipayAuthenticator {
+                            override fun onAuthenticationRequest(data: String): Map<String, String> {
+                                return PayTask(this@AlipayActivity).payV2(data, true)
+                            }
+                        },
                         callback = callback
                     )
                 },
