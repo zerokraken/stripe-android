@@ -193,9 +193,9 @@ internal class PaymentAuthWebView @JvmOverloads constructor(
 
         private fun openIntentScheme(uri: Uri) {
             logger.debug("PaymentAuthWebViewClient#openIntentScheme()")
-            try {
+            runCatching {
                 openIntent(Intent.parseUri(uri.toString(), Intent.URI_INTENT_SCHEME))
-            } catch (e: Exception) {
+            }.recover {
                 onAuthCompleted()
             }
         }
@@ -204,8 +204,12 @@ internal class PaymentAuthWebView @JvmOverloads constructor(
             logger.debug("PaymentAuthWebViewClient#openIntent()")
             if (intent.resolveActivity(packageManager) != null) {
                 activity.startActivity(intent)
-            } else {
-                // complete auth if the deep-link can't be opened
+            } else if (intent.scheme != "alipays") {
+                // complete auth if the deep-link can't be opened unless it is Alipay.
+                // The Alipay web view tries to open the Alipay app as soon as it is opened
+                // irrespective of whether or not the app is installed.
+                // If this intent fails to resolve, we should still let the user
+                // continue on the mobile site.
                 onAuthCompleted()
             }
         }

@@ -15,16 +15,18 @@ import com.stripe.android.model.SetupIntent
 import com.stripe.android.model.Source
 import com.stripe.android.model.Stripe3ds2AuthResult
 import com.stripe.android.model.Stripe3ds2Fingerprint
-import com.stripe.android.model.Stripe3dsRedirect
 import com.stripe.android.model.StripeIntent
+import com.stripe.android.model.StripeIntent.NextActionData.RedirectToUrl
+import com.stripe.android.model.StripeIntent.NextActionData.RedirectToUrl.MobileData.Alipay as AlipayData
 import com.stripe.android.stripe3ds2.init.ui.StripeUiCustomization
 import com.stripe.android.stripe3ds2.service.StripeThreeDs2Service
 import com.stripe.android.stripe3ds2.service.StripeThreeDs2ServiceImpl
+import com.stripe.android.stripe3ds2.transaction.ChallengeParameters
 import com.stripe.android.stripe3ds2.transaction.CompletionEvent
 import com.stripe.android.stripe3ds2.transaction.MessageVersionRegistry
 import com.stripe.android.stripe3ds2.transaction.ProtocolErrorEvent
 import com.stripe.android.stripe3ds2.transaction.RuntimeErrorEvent
-import com.stripe.android.stripe3ds2.transaction.StripeChallengeParameters
+import com.stripe.android.stripe3ds2.transaction.Stripe3ds2ActivityStarterHost
 import com.stripe.android.stripe3ds2.transaction.StripeChallengeStatusReceiver
 import com.stripe.android.stripe3ds2.transaction.Transaction
 import com.stripe.android.stripe3ds2.views.ChallengeProgressDialogActivity
@@ -77,11 +79,22 @@ internal class StripePaymentController internal constructor(
         confirmStripeIntentParams: ConfirmStripeIntentParams,
         requestOptions: ApiRequest.Options
     ) {
-        ConfirmStripeIntentTask(
-            stripeRepository, confirmStripeIntentParams, requestOptions, workScope,
+        startConfirm(
+            confirmStripeIntentParams,
+            requestOptions,
             ConfirmStripeIntentCallback(
                 host, requestOptions, this, getRequestCode(confirmStripeIntentParams)
             )
+        )
+    }
+
+    override fun startConfirm(
+        confirmStripeIntentParams: ConfirmStripeIntentParams,
+        requestOptions: ApiRequest.Options,
+        callback: ApiResultCallback<StripeIntent>
+    ) {
+        ConfirmStripeIntentTask(
+            stripeRepository, confirmStripeIntentParams, requestOptions, workScope, callback
         ).execute()
     }
 
@@ -289,6 +302,68 @@ internal class StripePaymentController internal constructor(
         stripeRepository.retrieveSource(sourceId, clientSecret, requestOptions, callback)
     }
 
+    override fun authenticateAlipay(
+        intent: StripeIntent,
+        stripeAccountId: String?,
+        authenticator: AlipayAuthenticator,
+        callback: ApiResultCallback<PaymentIntentResult>
+    ) {
+        AlipayAuthenticationTask(
+            intent,
+            authenticator,
+            object : ApiResultCallback<Int> {
+                override fun onSuccess(result: Int) {
+                    val requestOptions = ApiRequest.Options(
+                        apiKey = publishableKey,
+                        stripeAccount = stripeAccountId
+                    )
+
+                    stripeRepository.retrieveIntent(
+                        intent.clientSecret.orEmpty(),
+                        requestOptions,
+                        expandFields = EXPAND_PAYMENT_METHOD,
+                        callback = createPaymentIntentCallback(
+                            requestOptions, result, "", false, callback
+                        )
+                    )
+                }
+
+                override fun onError(e: Exception) {
+                    callback.onError(e)
+                }
+            }
+        ).execute()
+    }
+
+    internal class AlipayAuthenticationTask(
+        private val intent: StripeIntent,
+        private val authenticator: AlipayAuthenticator,
+        callback: ApiResultCallback<Int>
+    ) : ApiOperation<Int>(callback = callback) {
+        override suspend fun getResult(): Int? {
+            val nextActionData = intent.nextActionData
+            if (nextActionData is RedirectToUrl && nextActionData.mobileData is AlipayData) {
+                val output = authenticator.onAuthenticationRequest(nextActionData.mobileData.data)
+                return when (output[RESULT_FIELD]) {
+                    RESULT_CODE_SUCCESS -> StripeIntentResult.Outcome.SUCCEEDED
+                    RESULT_CODE_FAILED -> StripeIntentResult.Outcome.FAILED
+                    RESULT_CODE_CANCELLED -> StripeIntentResult.Outcome.CANCELED
+                    else -> StripeIntentResult.Outcome.UNKNOWN
+                }
+            } else {
+                throw RuntimeException("Unable to authenticate Payment Intent with Alipay SDK")
+            }
+        }
+
+        companion object {
+            private const val RESULT_FIELD = "resultStatus"
+            // https://intl.alipay.com/docs/ac/3rdpartryqrcode/standard_4
+            private const val RESULT_CODE_SUCCESS = "9000"
+            private const val RESULT_CODE_CANCELLED = "6001"
+            private const val RESULT_CODE_FAILED = "4000"
+        }
+    }
+
     private fun createPaymentIntentCallback(
         requestOptions: ApiRequest.Options,
         @StripeIntentResult.Outcome flowOutcome: Int,
@@ -386,55 +461,48 @@ internal class StripePaymentController internal constructor(
         requestOptions: ApiRequest.Options
     ) {
         if (stripeIntent.requiresAction()) {
-            when (stripeIntent.nextActionType) {
-                StripeIntent.NextActionType.UseStripeSdk -> {
-                    val sdkData = stripeIntent.stripeSdkData
-                    when {
-                        sdkData?.is3ds2 == true -> {
-                            analyticsRequestExecutor.executeAsync(
-                                analyticsRequestFactory.create(
-                                    analyticsDataFactory.createAuthParams(
-                                        AnalyticsEvent.Auth3ds2Fingerprint,
-                                        stripeIntent.id.orEmpty()
-                                    ),
-                                    requestOptions
-                                )
-                            )
-                            try {
-                                begin3ds2Auth(
-                                    host,
-                                    stripeIntent,
-                                    Stripe3ds2Fingerprint.create(sdkData),
-                                    requestOptions
-                                )
-                            } catch (e: CertificateException) {
-                                handleError(host, getRequestCode(stripeIntent), e)
-                            }
-                        }
-                        sdkData?.is3ds1 == true -> {
-                            analyticsRequestExecutor.executeAsync(
-                                analyticsRequestFactory.create(
-                                    analyticsDataFactory.createAuthParams(
-                                        AnalyticsEvent.Auth3ds1Sdk,
-                                        stripeIntent.id.orEmpty()
-                                    ),
-                                    requestOptions
-                                )
-                            )
-                            beginWebAuth(
-                                host,
-                                getRequestCode(stripeIntent),
-                                stripeIntent.clientSecret.orEmpty(),
-                                Stripe3dsRedirect.create(sdkData).url,
-                                requestOptions.stripeAccount,
-                                enableLogging = enableLogging
-                            )
-                        }
-                        else -> // authentication type is not supported
-                            bypassAuth(host, stripeIntent, requestOptions.stripeAccount)
+            when (val nextActionData = stripeIntent.nextActionData) {
+                is StripeIntent.NextActionData.SdkData.Use3DS2 -> {
+                    analyticsRequestExecutor.executeAsync(
+                        analyticsRequestFactory.create(
+                            analyticsDataFactory.createAuthParams(
+                                AnalyticsEvent.Auth3ds2Fingerprint,
+                                stripeIntent.id.orEmpty()
+                            ),
+                            requestOptions
+                        )
+                    )
+                    try {
+                        begin3ds2Auth(
+                            host,
+                            stripeIntent,
+                            Stripe3ds2Fingerprint(nextActionData),
+                            requestOptions
+                        )
+                    } catch (e: CertificateException) {
+                        handleError(host, getRequestCode(stripeIntent), e)
                     }
                 }
-                StripeIntent.NextActionType.RedirectToUrl -> {
+                is StripeIntent.NextActionData.SdkData.Use3DS1 -> {
+                    analyticsRequestExecutor.executeAsync(
+                        analyticsRequestFactory.create(
+                            analyticsDataFactory.createAuthParams(
+                                AnalyticsEvent.Auth3ds1Sdk,
+                                stripeIntent.id.orEmpty()
+                            ),
+                            requestOptions
+                        )
+                    )
+                    beginWebAuth(
+                        host,
+                        getRequestCode(stripeIntent),
+                        stripeIntent.clientSecret.orEmpty(),
+                        nextActionData.url,
+                        requestOptions.stripeAccount,
+                        enableLogging = enableLogging
+                    )
+                }
+                is StripeIntent.NextActionData.RedirectToUrl -> {
                     analyticsRequestExecutor.executeAsync(
                         analyticsRequestFactory.create(
                             analyticsDataFactory.createAuthParams(
@@ -445,19 +513,17 @@ internal class StripePaymentController internal constructor(
                         )
                     )
 
-                    val redirectData = stripeIntent.redirectData
                     beginWebAuth(
                         host,
                         getRequestCode(stripeIntent),
                         stripeIntent.clientSecret.orEmpty(),
-                        redirectData?.url.toString(),
+                        nextActionData.url.toString(),
                         requestOptions.stripeAccount,
-                        redirectData?.returnUrl,
+                        nextActionData.returnUrl,
                         enableLogging = enableLogging
                     )
                 }
-                else -> // next action type is not supported, so bypass authentication
-                    bypassAuth(host, stripeIntent, requestOptions.stripeAccount)
+                else -> bypassAuth(host, stripeIntent, requestOptions.stripeAccount)
             }
         } else {
             // no action required, so bypass authentication
@@ -518,9 +584,6 @@ internal class StripePaymentController internal constructor(
             config.stripe3ds2Config.uiCustomization.uiCustomization
         )
 
-        val redirectData = stripeIntent.redirectData
-        val returnUrl = redirectData?.returnUrl
-
         val areqParams = transaction.authenticationRequestParameters
         val timeout = config.stripe3ds2Config.timeout
         val authParams = Stripe3ds2AuthParams(
@@ -532,7 +595,9 @@ internal class StripePaymentController internal constructor(
             areqParams.sdkEphemeralPublicKey,
             areqParams.messageVersion,
             timeout,
-            returnUrl
+            // We do not currently have a fallback url
+            // TODO(smaskell-stripe): Investigate more robust error handling
+            returnUrl = null
         )
         stripeRepository.start3ds2Auth(
             authParams,
@@ -679,16 +744,22 @@ internal class StripePaymentController internal constructor(
         }
 
         private fun startChallengeFlow(ares: Stripe3ds2AuthResult.Ares) {
-            val challengeParameters = StripeChallengeParameters().also {
-                it.acsSignedContent = ares.acsSignedContent
-                it.threeDsServerTransactionId = ares.threeDSServerTransId
-                it.acsTransactionId = ares.acsTransId
+            val challengeParameters = ChallengeParameters(
+                acsSignedContent = ares.acsSignedContent,
+                threeDsServerTransactionId = ares.threeDSServerTransId,
+                acsTransactionId = ares.acsTransId
+            )
+
+            val host = host.fragment?.let { fragment ->
+                Stripe3ds2ActivityStarterHost(fragment)
+            } ?: host.activity?.let { activity ->
+                Stripe3ds2ActivityStarterHost(activity)
             }
 
-            host.activity?.let { activity ->
+            host?.let {
                 challengeFlowStarter.start(Runnable {
                     transaction.doChallenge(
-                        activity,
+                        it,
                         challengeParameters,
                         PaymentAuth3ds2ChallengeStatusReceiver.create(
                             stripeRepository,

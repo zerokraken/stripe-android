@@ -59,23 +59,24 @@ class ConfirmSepaDebitActivity : StripeIntentActivity() {
         snackbarController.show("Status after confirmation: ${result.intent.status}")
     }
 
-    override fun onConfirmError(e: Exception) {
-        super.onConfirmError(e)
-        snackbarController.show("Error during confirmation: ${e.message}")
+    override fun onConfirmError(throwable: Throwable) {
+        super.onConfirmError(throwable)
+        snackbarController.show("Error during confirmation: ${throwable.message}")
     }
 
     private fun createPaymentMethodParams(iban: String): PaymentMethodCreateParams {
         return PaymentMethodCreateParams.create(
             PaymentMethodCreateParams.SepaDebit(iban),
             PaymentMethod.BillingDetails.Builder()
-                .setAddress(Address.Builder()
-                    .setCity("San Francisco")
-                    .setCountry("US")
-                    .setLine1("123 Market St")
-                    .setLine2("#345")
-                    .setPostalCode("94107")
-                    .setState("CA")
-                    .build()
+                .setAddress(
+                    Address.Builder()
+                        .setCity("San Francisco")
+                        .setCountry("US")
+                        .setLine1("123 Market St")
+                        .setLine2("#345")
+                        .setPostalCode("94107")
+                        .setState("CA")
+                        .build()
                 )
                 .setEmail("jenny@example.com")
                 .setName("Jenny Rosen")

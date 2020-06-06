@@ -33,9 +33,7 @@ class ExpiryDateEditText @JvmOverloads constructor(
     internal var completionCallback: () -> Unit = {}
 
     /**
-     * Gets whether or not the date currently entered is valid and not yet passed.
-     *
-     * @return `true` if the text entered represents a valid expiry date that has not
+     * Is `true` if the text entered represents a valid expiry date that has not
      * yet passed, and `false` if not.
      */
     var isDateValid: Boolean = false
@@ -45,8 +43,6 @@ class ExpiryDateEditText @JvmOverloads constructor(
      * Gets the expiry date displayed on this control if it is valid, or `null` if it is not.
      * The return value is given as a [Pair], where the first entry is the two-digit month
      * (from 01-12) and the second entry is the four-digit year (2017, not 17).
-     *
-     * @return a [Pair] of the form (month, year) if the date is valid, or `null` if not
      */
     val validDateFields: Pair<Int, Int>?
         get() {
@@ -241,24 +237,20 @@ class ExpiryDateEditText @JvmOverloads constructor(
     }
 
     private fun updateInputValues(month: String, year: String) {
-        val inputMonth: Int = if (month.length != 2) {
+        val inputMonth = if (month.length != 2) {
             INVALID_INPUT
         } else {
-            try {
+            runCatching {
                 month.toInt()
-            } catch (numEx: NumberFormatException) {
-                INVALID_INPUT
-            }
+            }.getOrDefault(INVALID_INPUT)
         }
 
-        val inputYear: Int = if (year.length != 2) {
+        val inputYear = if (year.length != 2) {
             INVALID_INPUT
         } else {
-            try {
+            runCatching {
                 DateUtils.convertTwoDigitYearToFour(year.toInt())
-            } catch (numEx: NumberFormatException) {
-                INVALID_INPUT
-            }
+            }.getOrDefault(INVALID_INPUT)
         }
 
         isDateValid = DateUtils.isExpiryDataValid(inputMonth, inputYear)

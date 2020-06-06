@@ -33,20 +33,27 @@ class CustomerSessionActivity : AppCompatActivity() {
 
         viewBinding.progressBar.visibility = View.VISIBLE
         CustomerSession.getInstance().retrieveCurrentCustomer(
-            CustomerRetrievalListenerImpl(this))
+            CustomerRetrievalListenerImpl(this)
+        )
 
         viewBinding.selectPaymentMethodButton.isEnabled = false
         viewBinding.selectPaymentMethodButton.setOnClickListener { launchWithCustomer() }
     }
 
     private fun launchWithCustomer() {
-        PaymentMethodsActivityStarter(this).startForResult()
+        PaymentMethodsActivityStarter(this)
+            .startForResult(
+                PaymentMethodsActivityStarter.Args.Builder()
+                    .setCanDeletePaymentMethods(true)
+                    .build()
+            )
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == PaymentMethodsActivityStarter.REQUEST_CODE &&
-            resultCode == Activity.RESULT_OK && data != null) {
+            resultCode == Activity.RESULT_OK && data != null
+        ) {
             val paymentMethod =
                 PaymentMethodsActivityStarter.Result.fromIntent(data)?.paymentMethod
             paymentMethod?.card?.let { card ->

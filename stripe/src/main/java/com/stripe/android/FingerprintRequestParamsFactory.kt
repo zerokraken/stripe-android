@@ -1,10 +1,10 @@
 package com.stripe.android
 
 import android.content.Context
-import android.content.pm.PackageManager
 import android.os.Build
 import android.util.DisplayMetrics
 import androidx.annotation.VisibleForTesting
+import com.stripe.android.utils.ContextUtils.packageInfo
 import java.math.BigDecimal
 import java.math.MathContext
 import java.util.Locale
@@ -14,24 +14,10 @@ import java.util.concurrent.TimeUnit
 internal class FingerprintRequestParamsFactory @VisibleForTesting internal constructor(
     private val displayMetrics: DisplayMetrics,
     private val packageName: String,
-    private val packageManager: PackageManager,
+    private val versionName: String?,
     private val timeZone: String,
     private val clientFingerprintDataStore: ClientFingerprintDataStore
 ) {
-    private val versionName: String?
-        get() {
-            if (packageName.isNotBlank()) {
-                try {
-                    val packageInfo = packageManager.getPackageInfo(packageName, 0)
-                    if (packageInfo?.versionName != null) {
-                        return packageInfo.versionName
-                    }
-                } catch (ignored: PackageManager.NameNotFoundException) {
-                }
-            }
-
-            return null
-        }
 
     private val screen: String =
         "${displayMetrics.widthPixels}w_${displayMetrics.heightPixels}h_${displayMetrics.densityDpi}dpi"
@@ -42,7 +28,7 @@ internal class FingerprintRequestParamsFactory @VisibleForTesting internal const
     internal constructor(context: Context) : this(
         displayMetrics = context.resources.displayMetrics,
         packageName = context.packageName.orEmpty(),
-        packageManager = context.packageManager,
+        versionName = context.packageInfo?.versionName,
         timeZone = createTimezone(),
         clientFingerprintDataStore = ClientFingerprintDataStore.Default(context)
     )

@@ -26,6 +26,7 @@ abstract class ActivityStarter<TargetActivityType : Activity, ArgsType : Activit
         requestCode: Int
     ) : this(
         activity = activity,
+        fragment = null,
         targetClass = targetClass,
         defaultArgs = args,
         requestCode = requestCode
@@ -44,8 +45,7 @@ abstract class ActivityStarter<TargetActivityType : Activity, ArgsType : Activit
         requestCode = requestCode
     )
 
-    @JvmOverloads
-    fun startForResult(args: ArgsType = defaultArgs) {
+    fun startForResult(args: ArgsType) {
         val intent = Intent(activity, targetClass)
             .putExtra(Args.EXTRA, args)
 

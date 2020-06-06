@@ -13,6 +13,21 @@ internal class Stripe3ds2Fingerprint private constructor(
     val serverTransactionId: String,
     val directoryServerEncryption: DirectoryServerEncryption
 ) {
+
+    @Throws(CertificateException::class)
+    internal constructor(sdkData: StripeIntent.NextActionData.SdkData.Use3DS2) :
+        this(
+            sdkData.source,
+            DirectoryServer.lookup(sdkData.serverName),
+            sdkData.transactionId,
+            DirectoryServerEncryption(
+                sdkData.serverEncryption.directoryServerId,
+                sdkData.serverEncryption.dsCertificateData,
+                sdkData.serverEncryption.rootCertsData,
+                sdkData.serverEncryption.keyId
+            )
+        )
+
     class DirectoryServerEncryption @VisibleForTesting
     @Throws(CertificateException::class)
     internal constructor(
@@ -71,28 +86,6 @@ internal class Stripe3ds2Fingerprint private constructor(
                 return values().find { it.networkName == networkName }
                     ?: error("Invalid directory server networkName: '$networkName'")
             }
-        }
-    }
-
-    internal companion object {
-        private const val FIELD_THREE_D_SECURE_2_SOURCE = "three_d_secure_2_source"
-        private const val FIELD_DIRECTORY_SERVER_NAME = "directory_server_name"
-        private const val FIELD_SERVER_TRANSACTION_ID = "server_transaction_id"
-        private const val FIELD_DIRECTORY_SERVER_ENCRYPTION = "directory_server_encryption"
-
-        @JvmSynthetic
-        @Throws(CertificateException::class)
-        internal fun create(sdkData: StripeIntent.SdkData): Stripe3ds2Fingerprint {
-            require(sdkData.is3ds2) { "Expected SdkData with type='stripe_3ds2_fingerprint'." }
-
-            return Stripe3ds2Fingerprint(
-                (sdkData.data[FIELD_THREE_D_SECURE_2_SOURCE] as String),
-                DirectoryServer.lookup((sdkData.data[FIELD_DIRECTORY_SERVER_NAME] as String)),
-                (sdkData.data[FIELD_SERVER_TRANSACTION_ID] as String),
-                DirectoryServerEncryption.create(
-                    (sdkData.data[FIELD_DIRECTORY_SERVER_ENCRYPTION] as Map<String, *>)
-                )
-            )
         }
     }
 }

@@ -1,52 +1,18 @@
 package com.stripe.android.model
 
-import com.stripe.android.model.parsers.PaymentIntentJsonParser
+import android.net.Uri
+import com.google.common.truth.Truth.assertThat
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
-import org.json.JSONObject
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 @RunWith(RobolectricTestRunner::class)
 class PaymentIntentTest {
-
-    @Test
-    fun getAuthorizationUrl_whenProvidedBadUrl_doesNotCrash() {
-        val paymentIntent = requireNotNull(PARSER.parse(
-            PAYMENT_INTENT_WITH_SOURCE_WITH_BAD_AUTH_URL_JSON
-        ))
-
-        val authUrl = paymentIntent.redirectUrl
-        assertNotNull(authUrl)
-        assertEquals(BAD_URL, authUrl.encodedPath)
-    }
-
-    @Test
-    fun getRedirectUrl_withRedirectToUrlPopulate_returnsRedirectUrl() {
-        val paymentIntent = requireNotNull(
-            PARSER.parse(PARTIAL_PAYMENT_INTENT_WITH_REDIRECT_URL_JSON)
-        )
-        assertTrue(paymentIntent.requiresAction())
-        assertEquals(StripeIntent.NextActionType.RedirectToUrl, paymentIntent.nextActionType)
-        val redirectUrl = paymentIntent.redirectUrl
-        assertNotNull(redirectUrl)
-        assertEquals("https://example.com/redirect", redirectUrl.toString())
-    }
-
-    @Test
-    fun getRedirectUrl_withAuthorizeWithUrlPopulated_returnsRedirectUrl() {
-        val paymentIntent = requireNotNull(
-            PARSER.parse(PARTIAL_PAYMENT_INTENT_WITH_AUTHORIZE_WITH_URL_JSON)
-        )
-        assertEquals(StripeIntent.NextActionType.RedirectToUrl, paymentIntent.nextActionType)
-        val redirectUrl = paymentIntent.redirectUrl
-        assertNotNull(redirectUrl)
-        assertEquals("https://example.com/redirect", redirectUrl.toString())
-    }
 
     @Test
     fun parseIdFromClientSecret_parsesCorrectly() {
@@ -69,29 +35,29 @@ class PaymentIntentTest {
     }
 
     @Test
-    fun getNextActionTypeAndStripeSdkData_whenUseStripeSdkWith3ds2() {
-        assertEquals(StripeIntent.NextActionType.UseStripeSdk,
-            PaymentIntentFixtures.PI_REQUIRES_MASTERCARD_3DS2.nextActionType)
-        val sdkData = PaymentIntentFixtures.PI_REQUIRES_MASTERCARD_3DS2.stripeSdkData
-        assertNotNull(sdkData)
-        assertTrue(sdkData.is3ds2)
-        assertEquals("mastercard", sdkData.data["directory_server_name"])
+    fun getNextActionData_whenUseStripeSdkWith3ds2() {
+        val paymentIntent = PaymentIntentFixtures.PI_REQUIRES_MASTERCARD_3DS2
+        assertTrue(paymentIntent.nextActionData is StripeIntent.NextActionData.SdkData.Use3DS2)
+        val sdkData = paymentIntent.nextActionData as StripeIntent.NextActionData.SdkData.Use3DS2
+        assertEquals("mastercard", sdkData.serverName)
     }
 
     @Test
-    fun getNextActionTypeAndStripeSdkData_whenUseStripeSdkWith3ds1() {
+    fun getNextActionData_whenUseStripeSdkWith3ds1() {
         val paymentIntent = PaymentIntentFixtures.PI_REQUIRES_3DS1
-        assertEquals(StripeIntent.NextActionType.UseStripeSdk, paymentIntent.nextActionType)
-        val sdkData = requireNotNull(paymentIntent.stripeSdkData)
-        assertTrue(sdkData.is3ds1)
-        assertNotNull(sdkData.data["stripe_js"])
+        assertTrue(paymentIntent.nextActionData is StripeIntent.NextActionData.SdkData.Use3DS1)
+        val sdkData = paymentIntent.nextActionData as StripeIntent.NextActionData.SdkData.Use3DS1
+        assertThat(sdkData.url).isNotEmpty()
     }
 
     @Test
-    fun getNextActionTypeAndStripeSdkData_whenRedirectToUrl() {
-        assertEquals(StripeIntent.NextActionType.RedirectToUrl,
-            PaymentIntentFixtures.PI_REQUIRES_REDIRECT.nextActionType)
-        assertNull(PaymentIntentFixtures.PI_REQUIRES_REDIRECT.stripeSdkData)
+    fun getNextActionData_whenRedirectToUrl() {
+        val paymentIntent = PaymentIntentFixtures.PI_REQUIRES_REDIRECT
+        assertTrue(paymentIntent.nextActionData is StripeIntent.NextActionData.RedirectToUrl)
+        val redirectData = paymentIntent.nextActionData as StripeIntent.NextActionData.RedirectToUrl
+        assertEquals(Uri.parse("https://hooks.stripe.com/3d_secure_2_eap/begin_test/src_1Ecaz6CRMbs6FrXfuYKBRSUG/src_client_secret_F6octeOshkgxT47dr0ZxSZiv"),
+            redirectData.url)
+        assertEquals(redirectData.returnUrl, "stripe://deeplink")
     }
 
     @Test
@@ -149,75 +115,6 @@ class PaymentIntentTest {
         assertEquals(
             "pi_a1b2c3_secret_x7y8z9",
             PaymentIntent.ClientSecret("pi_a1b2c3_secret_x7y8z9").value
-        )
-    }
-
-    private companion object {
-        private val PARSER = PaymentIntentJsonParser()
-
-        private const val BAD_URL: String = "nonsense-blahblah"
-
-        private val PAYMENT_INTENT_WITH_SOURCE_WITH_BAD_AUTH_URL_JSON = JSONObject(
-            """
-            {
-                "id": "pi_1CkiBMLENEVhOs7YMtUehLau",
-                "object": "payment_intent",
-                "amount": 1000,
-                "canceled_at": 1530839340,
-                "capture_method": "automatic",
-                "client_secret": "pi_1CkiBMLENEVhOs7YMtUehLau_secret_s4O8SDh7s6spSmHDw1VaYPGZA",
-                "confirmation_method": "publishable",
-                "created": 1530838340,
-                "currency": "usd",
-                "description": "Example PaymentIntent charge",
-                "livemode": false,
-                "next_action": {
-                    "type": "redirect_to_url",
-                    "redirect_to_url": {
-                        "url": "nonsense-blahblah",
-                        "return_url": "yourapp://post-authentication-return-url"
-                    }
-                },
-                "receipt_email": null,
-                "shipping": null,
-                "source": "src_1CkiC3LENEVhOs7YMSa4yx4G",
-                "status": "requires_action"
-            }
-            """.trimIndent()
-        )
-
-        private val PARTIAL_PAYMENT_INTENT_WITH_REDIRECT_URL_JSON = JSONObject(
-            """
-            {
-                "id": "pi_Aabcxyz01aDfoo",
-                "object": "payment_intent",
-                "status": "requires_action",
-                "next_action": {
-                    "type": "redirect_to_url",
-                    "redirect_to_url": {
-                        "url": "https://example.com/redirect",
-                        "return_url": "yourapp://post-authentication-return-url"
-                    }
-                }
-            }
-            """.trimIndent()
-        )
-
-        private val PARTIAL_PAYMENT_INTENT_WITH_AUTHORIZE_WITH_URL_JSON = JSONObject(
-            """
-            {
-                "id": "pi_Aabcxyz01aDfoo",
-                "object": "payment_intent",
-                "status": "requires_action",
-                "next_action": {
-                    "type": "redirect_to_url",
-                    "redirect_to_url": {
-                        "url": "https://example.com/redirect",
-                        "return_url": "yourapp://post-authentication-return-url"
-                    }
-                }
-            }
-            """.trimIndent()
         )
     }
 }

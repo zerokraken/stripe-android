@@ -1,5 +1,6 @@
 package com.stripe.android.view
 
+import com.google.common.truth.Truth.assertThat
 import com.nhaarman.mockitokotlin2.KArgumentCaptor
 import com.nhaarman.mockitokotlin2.argumentCaptor
 import com.nhaarman.mockitokotlin2.eq
@@ -9,31 +10,34 @@ import com.stripe.android.CustomerSession
 import com.stripe.android.PaymentSessionConfig
 import com.stripe.android.PaymentSessionData
 import com.stripe.android.PaymentSessionFixtures
+import com.stripe.android.model.Customer
 import com.stripe.android.model.CustomerFixtures
 import com.stripe.android.model.ShippingInformation
 import com.stripe.android.model.ShippingMethod
 import kotlin.test.Test
-import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
-import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.TestCoroutineDispatcher
+import kotlinx.coroutines.test.TestCoroutineScope
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 @RunWith(RobolectricTestRunner::class)
+@ExperimentalCoroutinesApi
 class PaymentFlowViewModelTest {
     private val customerSession: CustomerSession = mock()
 
-    private val customerRetrievalListener: KArgumentCaptor<CustomerSession.CustomerRetrievalListener> by lazy {
-        argumentCaptor<CustomerSession.CustomerRetrievalListener>()
-    }
+    private val customerRetrievalListener: KArgumentCaptor<CustomerSession.CustomerRetrievalListener> = argumentCaptor()
+
+    private val testScope = TestCoroutineScope(TestCoroutineDispatcher())
 
     private val viewModel: PaymentFlowViewModel by lazy {
         PaymentFlowViewModel(
             customerSession = customerSession,
             paymentSessionData = PaymentSessionData(PaymentSessionFixtures.CONFIG),
-            workScope = MainScope()
+            workScope = testScope
         )
     }
 
@@ -49,12 +53,13 @@ class PaymentFlowViewModelTest {
             customerRetrievalListener.capture()
         )
 
+        var customer: Customer? = null
+        result.observeForever {
+            customer = it.getOrThrow()
+        }
         customerRetrievalListener.firstValue.onCustomerRetrieved(CustomerFixtures.CUSTOMER)
 
-        val resultValue =
-            requireNotNull(result.value) as PaymentFlowViewModel.SaveCustomerShippingInfoResult.Success
-        assertNotNull(resultValue.customer)
-
+        assertNotNull(customer)
         assertTrue(viewModel.isShippingInfoSubmitted)
     }
 
@@ -66,10 +71,16 @@ class PaymentFlowViewModelTest {
             ShippingInfoFixtures.DEFAULT
         )
 
-        val resultValue =
-            requireNotNull(result.value) as PaymentFlowViewModel.ValidateShippingInfoResult.Success
-        assertEquals(SHIPPING_METHODS, resultValue.shippingMethods)
-        assertEquals(SHIPPING_METHODS, viewModel.shippingMethods)
+        var shippingMethods: List<ShippingMethod>? = null
+        result.observeForever {
+            shippingMethods = it.getOrThrow()
+        }
+
+        assertThat(shippingMethods)
+            .isEqualTo(SHIPPING_METHODS)
+
+        assertThat(viewModel.shippingMethods)
+            .isEqualTo(SHIPPING_METHODS)
     }
 
     @Test
@@ -80,10 +91,15 @@ class PaymentFlowViewModelTest {
             ShippingInfoFixtures.DEFAULT
         )
 
-        val resultValue =
-            requireNotNull(result.value) as PaymentFlowViewModel.ValidateShippingInfoResult.Success
-        assertTrue(resultValue.shippingMethods.isEmpty())
-        assertTrue(viewModel.shippingMethods.isEmpty())
+        var shippingMethods: List<ShippingMethod>? = null
+        result.observeForever {
+            shippingMethods = it.getOrThrow()
+        }
+
+        assertThat(shippingMethods)
+            .isEmpty()
+        assertThat(viewModel.shippingMethods)
+            .isEmpty()
     }
 
     @Test
@@ -94,9 +110,13 @@ class PaymentFlowViewModelTest {
             ShippingInfoFixtures.DEFAULT
         )
 
-        val resultValue =
-            requireNotNull(result.value) as PaymentFlowViewModel.ValidateShippingInfoResult.Error
-        assertEquals(SHIPPING_ERROR_MESSAGE, resultValue.errorMessage)
+        var throwable: Throwable? = null
+        result.observeForever {
+            throwable = it.exceptionOrNull()
+        }
+
+        assertThat(throwable?.message)
+            .isEqualTo(SHIPPING_ERROR_MESSAGE)
     }
 
     private class FakeShippingInformationValidator : PaymentSessionConfig.ShippingInformationValidator {

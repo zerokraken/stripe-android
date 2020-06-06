@@ -10,7 +10,6 @@ import com.stripe.android.exception.CardException;
 import com.stripe.android.exception.InvalidRequestException;
 import com.stripe.android.exception.StripeException;
 import com.stripe.android.model.AccountParams;
-import com.stripe.android.model.Address;
 import com.stripe.android.model.AddressFixtures;
 import com.stripe.android.model.BankAccount;
 import com.stripe.android.model.BankAccountTokenParamsFixtures;
@@ -41,7 +40,6 @@ import java.util.UUID;
 
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.function.ThrowingRunnable;
 import org.junit.runner.RunWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
@@ -114,33 +112,23 @@ public class StripeTest {
 
     @Test
     public void constructorShouldFailWithNullPublishableKey() {
-        assertThrows(IllegalArgumentException.class, new ThrowingRunnable() {
-            @Override
-            public void run() {
-                //noinspection ConstantConditions
-                new Stripe(context, null);
-            }
+        assertThrows(IllegalArgumentException.class, () -> {
+            //noinspection ConstantConditions
+            new Stripe(context, null);
         });
     }
 
     @Test
     public void constructorShouldFailWithEmptyPublishableKey() {
-        assertThrows(IllegalArgumentException.class, new ThrowingRunnable() {
-            @Override
-            public void run() {
-                new Stripe(context, "");
-            }
-        });
+        assertThrows(IllegalArgumentException.class, () -> new Stripe(context, ""));
     }
 
     @Test
     public void constructorShouldFailWithSecretKey() {
-        assertThrows(IllegalArgumentException.class, new ThrowingRunnable() {
-            @Override
-            public void run() {
-                new Stripe(context, ApiKeyFixtures.FAKE_SECRET_KEY);
-            }
-        });
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> new Stripe(context, ApiKeyFixtures.FAKE_SECRET_KEY))
+        ;
     }
 
     @Test
@@ -299,7 +287,7 @@ public class StripeTest {
         assertTrue(bankAccountId.startsWith("ba_"));
         assertEquals("Jenny Rosen", returnedBankAccount.getAccountHolderName());
         assertEquals(
-                BankAccount.BankAccountType.INDIVIDUAL,
+                BankAccount.Type.Individual,
                 returnedBankAccount.getAccountHolderType()
         );
         assertEquals("US", returnedBankAccount.getCountryCode());
@@ -390,13 +378,10 @@ public class StripeTest {
                 "wx65997d6307c3827d",
                 "WIDGET STORE"
         );
-        final InvalidRequestException ex = assertThrows(InvalidRequestException.class,
-                new ThrowingRunnable() {
-                    @Override
-                    public void run() throws Throwable {
-                        stripe.createSourceSynchronous(weChatPaySourceParams);
-                    }
-                });
+        final InvalidRequestException ex = assertThrows(
+                InvalidRequestException.class,
+                () -> stripe.createSourceSynchronous(weChatPaySourceParams)
+        );
         assertEquals(
                 "payment_method_unactivated",
                 Objects.requireNonNull(ex.getStripeError()).getCode()
@@ -890,13 +875,9 @@ public class StripeTest {
         final SourceParams sourceParams = SourceParams.createVisaCheckoutParams(
                 UUID.randomUUID().toString()
         );
-        final InvalidRequestException ex = assertThrows(InvalidRequestException.class,
-                new ThrowingRunnable() {
-                    @Override
-                    public void run() throws Throwable {
-                        defaultStripe.createSourceSynchronous(sourceParams);
-                    }
-                }
+        final InvalidRequestException ex = assertThrows(
+                InvalidRequestException.class,
+                () -> defaultStripe.createSourceSynchronous(sourceParams)
         );
         assertEquals("visa_checkout must be activated before use.", ex.getMessage());
     }
@@ -907,13 +888,9 @@ public class StripeTest {
                 UUID.randomUUID().toString(),
                 UUID.randomUUID().toString()
         );
-        final InvalidRequestException ex = assertThrows(InvalidRequestException.class,
-                new ThrowingRunnable() {
-                    @Override
-                    public void run() throws Throwable {
-                        defaultStripe.createSourceSynchronous(sourceParams);
-                    }
-                }
+        final InvalidRequestException ex = assertThrows(
+                InvalidRequestException.class,
+                () -> defaultStripe.createSourceSynchronous(sourceParams)
         );
         assertEquals("masterpass must be activated before use.", ex.getMessage());
     }
@@ -1054,12 +1031,7 @@ public class StripeTest {
         final Stripe stripe = createStripe(ApiKeyFixtures.FAKE_PUBLISHABLE_KEY);
         final AuthenticationException authenticationException = assertThrows(
                 AuthenticationException.class,
-                new ThrowingRunnable() {
-                    @Override
-                    public void run() throws Throwable {
-                        stripe.createCardTokenSynchronous(CARD);
-                    }
-                }
+                () -> stripe.createCardTokenSynchronous(CARD)
         );
         assertEquals("Invalid API Key provided: " + ApiKeyFixtures.FAKE_PUBLISHABLE_KEY,
                 authenticationException.getMessage());
@@ -1071,12 +1043,7 @@ public class StripeTest {
         final Card card = Card.create("42424242", 12, 2050, "123");
         final CardException cardException = assertThrows(
                 CardException.class,
-                new ThrowingRunnable() {
-                    @Override
-                    public void run() throws Throwable {
-                        defaultStripe.createCardTokenSynchronous(card);
-                    }
-                }
+                () -> defaultStripe.createCardTokenSynchronous(card)
         );
         assertEquals("Your card number is incorrect.", cardException.getMessage());
     }
@@ -1085,12 +1052,10 @@ public class StripeTest {
     public void retrievePaymentIntent_withInvalidClientSecret_shouldThrowException() {
         Locale.setDefault(Locale.GERMANY);
 
-        assertThrows(IllegalArgumentException.class, new ThrowingRunnable() {
-            @Override
-            public void run() throws Throwable {
-                defaultStripe.retrievePaymentIntentSynchronous("invalid");
-            }
-        });
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> defaultStripe.retrievePaymentIntentSynchronous("invalid")
+        );
     }
 
     @Test
@@ -1099,12 +1064,7 @@ public class StripeTest {
         final Card card = Card.create("4242424242424242", 11, 2015, "123");
         final CardException cardException = assertThrows(
                 CardException.class,
-                new ThrowingRunnable() {
-                    @Override
-                    public void run() throws Throwable {
-                        defaultStripe.createCardTokenSynchronous(card);
-                    }
-                }
+                () -> defaultStripe.createCardTokenSynchronous(card)
         );
         assertEquals("Your card's expiration year is invalid.",
                 cardException.getMessage());

@@ -47,11 +47,14 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
-import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.TestCoroutineDispatcher
+import kotlinx.coroutines.test.TestCoroutineScope
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 @RunWith(RobolectricTestRunner::class)
+@ExperimentalCoroutinesApi
 class StripePaymentControllerTest {
 
     private val activity: Activity = mock()
@@ -68,12 +71,9 @@ class StripePaymentControllerTest {
     private val controller: PaymentController by lazy {
         createController()
     }
-    private val analyticsDataFactory: AnalyticsDataFactory by lazy {
-        AnalyticsDataFactory(context, ApiKeyFixtures.FAKE_PUBLISHABLE_KEY)
-    }
-    private val host: AuthActivityStarter.Host by lazy {
-        AuthActivityStarter.Host.create(activity)
-    }
+    private val analyticsDataFactory = AnalyticsDataFactory(
+        context, ApiKeyFixtures.FAKE_PUBLISHABLE_KEY)
+    private val host = AuthActivityStarter.Host.create(activity)
 
     private val relayStarterArgsArgumentCaptor: KArgumentCaptor<PaymentRelayStarter.Args> = argumentCaptor()
     private val intentArgumentCaptor: KArgumentCaptor<Intent> = argumentCaptor()
@@ -81,6 +81,8 @@ class StripePaymentControllerTest {
     private val setupIntentResultArgumentCaptor: KArgumentCaptor<SetupIntentResult> = argumentCaptor()
     private val apiResultStripeIntentArgumentCaptor: KArgumentCaptor<ApiResultCallback<StripeIntent>> = argumentCaptor()
     private val sourceArgumentCaptor: KArgumentCaptor<Source> = argumentCaptor()
+
+    private val testScope = TestCoroutineScope(TestCoroutineDispatcher())
 
     @BeforeTest
     fun setup() {
@@ -93,9 +95,7 @@ class StripePaymentControllerTest {
     @Test
     fun handleNextAction_withMastercardAnd3ds2_shouldStart3ds2ChallengeFlow() {
         val paymentIntent = PaymentIntentFixtures.PI_REQUIRES_MASTERCARD_3DS2
-        val dsPublicKey = Stripe3ds2Fingerprint.create(
-            requireNotNull(paymentIntent.stripeSdkData)
-        )
+        val dsPublicKey = Stripe3ds2Fingerprint(paymentIntent.nextActionData as StripeIntent.NextActionData.SdkData.Use3DS2)
             .directoryServerEncryption
             .directoryServerPublicKey
         whenever(
@@ -286,11 +286,10 @@ class StripePaymentControllerTest {
 
     @Test
     fun test3ds2Receiver_whenCompleted_shouldFireAnalyticsRequest() {
-        val completionEvent = object : CompletionEvent {
-            override val sdkTransactionId: String = "8dd3413f-0b45-4234-bc45-6cc40fb1b0f1"
-
-            override val transactionStatus: String = "C"
-        }
+        val completionEvent = CompletionEvent(
+            sdkTransactionId = "8dd3413f-0b45-4234-bc45-6cc40fb1b0f1",
+            transactionStatus = "C"
+        )
 
         whenever(transaction.initialChallengeUiType).thenReturn("04")
 
@@ -385,10 +384,10 @@ class StripePaymentControllerTest {
 
     @Test
     fun test3ds2Receiver_whenRuntimeErrorError_shouldFireAnalyticsRequest() {
-        val runtimeErrorEvent = object : RuntimeErrorEvent {
-            override val errorCode: String = "404"
-            override val errorMessage: String = "Resource not found"
-        }
+        val runtimeErrorEvent = RuntimeErrorEvent(
+            errorCode = "404",
+            errorMessage = "Resource not found"
+        )
 
         val receiver = StripePaymentController.PaymentAuth3ds2ChallengeStatusReceiver(
             FakeStripeRepository(),
@@ -412,11 +411,14 @@ class StripePaymentControllerTest {
             analyticsParamsFirst[AnalyticsDataFactory.FIELD_EVENT]
         )
 
-        val errorData =
-            analyticsParamsFirst[AnalyticsDataFactory.FIELD_ERROR_DATA] as Map<String, String>
-
-        assertEquals("404", errorData["error_code"])
-        assertEquals("Resource not found", errorData["error_message"])
+        assertThat(analyticsParamsFirst[AnalyticsDataFactory.FIELD_ERROR_DATA])
+            .isEqualTo(
+                mapOf(
+                    "type" to "runtime_error_event",
+                    "error_code" to "404",
+                    "error_message" to "Resource not found"
+                )
+            )
 
         assertEquals(
             AnalyticsEvent.Auth3ds2ChallengePresented.toString(),
@@ -426,16 +428,15 @@ class StripePaymentControllerTest {
 
     @Test
     fun test3ds2Receiver_whenProtocolError_shouldFireAnalyticsRequest() {
-        val protocolErrorEvent = object : ProtocolErrorEvent {
-            override val sdkTransactionId: String = "8dd3413f-0b45-4234-bc45-6cc40fb1b0f1"
-
-            override val errorMessage: ErrorMessage = object : ErrorMessage {
-                override val errorCode: String = "201"
-                override val errorDescription: String = "Required element missing"
-                override val errorDetails: String = "eci"
-                override val transactionId: String = "047f76a6-d1d4-48a2-aa65-786abb6f7f46"
-            }
-        }
+        val protocolErrorEvent = ProtocolErrorEvent(
+            sdkTransactionId = "8dd3413f-0b45-4234-bc45-6cc40fb1b0f1",
+            errorMessage = ErrorMessage(
+                errorCode = "201",
+                errorDescription = "Required element missing",
+                errorDetails = "eci",
+                transactionId = "047f76a6-d1d4-48a2-aa65-786abb6f7f46"
+            )
+        )
 
         val receiver = StripePaymentController.PaymentAuth3ds2ChallengeStatusReceiver(
             FakeStripeRepository(),
@@ -459,15 +460,20 @@ class StripePaymentControllerTest {
             analyticsParamsFirst[AnalyticsDataFactory.FIELD_EVENT]
         )
 
-        val errorData =
-            analyticsParamsFirst[AnalyticsDataFactory.FIELD_ERROR_DATA] as Map<String, String>
+        assertThat(analyticsParamsFirst[AnalyticsDataFactory.FIELD_ERROR_DATA])
+            .isEqualTo(
+                mapOf(
+                    "type" to "protocol_error_event",
+                    "error_code" to "201",
+                    "sdk_trans_id" to "8dd3413f-0b45-4234-bc45-6cc40fb1b0f1",
+                    "error_description" to "Required element missing",
+                    "error_details" to "eci",
+                    "trans_id" to "047f76a6-d1d4-48a2-aa65-786abb6f7f46"
+                )
+            )
 
-        assertEquals("201", errorData["error_code"])
-
-        assertEquals(
-            AnalyticsEvent.Auth3ds2ChallengePresented.toString(),
-            requireNotNull(analyticsRequests[1].params)[AnalyticsDataFactory.FIELD_EVENT]
-        )
+        assertThat(requireNotNull(analyticsRequests[1].params)[AnalyticsDataFactory.FIELD_EVENT])
+            .isEqualTo(AnalyticsEvent.Auth3ds2ChallengePresented.toString())
     }
 
     @Test
@@ -727,7 +733,8 @@ class StripePaymentControllerTest {
             eq(StripePaymentController.SOURCE_REQUEST_CODE)
         )
         val intent = intentArgumentCaptor.firstValue
-        assertEquals(PaymentRelayActivity::class.java.name, intent.component?.className)
+        assertThat(intent.component?.className)
+            .isEqualTo(PaymentRelayActivity::class.java.name)
 
         verifyAnalytics(AnalyticsEvent.AuthSourceStart)
     }
@@ -772,7 +779,7 @@ class StripePaymentControllerTest {
             analyticsDataFactory,
             challengeFlowStarter,
             challengeProgressDialogActivityStarter,
-            MainScope()
+            testScope
         )
     }
 

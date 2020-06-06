@@ -1,5 +1,6 @@
 package com.stripe.android
 
+import android.annotation.SuppressLint
 import android.os.Parcelable
 import androidx.annotation.LayoutRes
 import androidx.annotation.WorkerThread
@@ -10,6 +11,7 @@ import com.stripe.android.model.ShippingMethod
 import com.stripe.android.view.AddPaymentMethodActivity
 import com.stripe.android.view.BillingAddressFields
 import com.stripe.android.view.PaymentFlowActivity
+import com.stripe.android.view.PaymentMethodsActivity
 import com.stripe.android.view.SelectShippingMethodWidget
 import com.stripe.android.view.ShippingInfoWidget
 import com.stripe.android.view.ShippingInfoWidget.CustomizableShippingField
@@ -34,6 +36,7 @@ data class PaymentSessionConfig internal constructor(
     val shouldShowGooglePay: Boolean = false,
     val allowedShippingCountryCodes: Set<String> = emptySet(),
     val billingAddressFields: BillingAddressFields = DEFAULT_BILLING_ADDRESS_FIELDS,
+    val canDeletePaymentMethods: Boolean = true,
 
     internal val shouldPrefetchCustomer: Boolean = true,
     internal val shippingInformationValidator: ShippingInformationValidator = DefaultShippingInfoValidator(),
@@ -100,6 +103,7 @@ data class PaymentSessionConfig internal constructor(
         private var shippingMethodsFactory: ShippingMethodsFactory? = null
         private var windowFlags: Int? = null
         private var shouldPrefetchCustomer: Boolean = true
+        private var canDeletePaymentMethods: Boolean = true
 
         @LayoutRes
         private var addPaymentMethodFooterLayoutId: Int = 0
@@ -118,6 +122,7 @@ data class PaymentSessionConfig internal constructor(
          * hidden in the shipping information screen. All fields will be shown if this list is
          * empty. Note that not all fields can be hidden, such as country or name.
          */
+        @SuppressLint("WrongConstant")
         fun setHiddenShippingInfoFields(
             @CustomizableShippingField vararg hiddenShippingInfoFields: String
         ): Builder = apply {
@@ -128,6 +133,7 @@ data class PaymentSessionConfig internal constructor(
          * @param optionalShippingInfoFields [CustomizableShippingField] fields that should be
          * optional in the [ShippingInfoWidget]
          */
+        @SuppressLint("WrongConstant")
         fun setOptionalShippingInfoFields(
             @CustomizableShippingField vararg optionalShippingInfoFields: String
         ): Builder = apply {
@@ -193,6 +199,14 @@ data class PaymentSessionConfig internal constructor(
          */
         fun setShouldShowGooglePay(shouldShowGooglePay: Boolean): Builder = apply {
             this.shouldShowGooglePay = shouldShowGooglePay
+        }
+
+        /**
+         * @param canDeletePaymentMethods controls whether the user can
+         * delete a payment method by swiping on it in [PaymentMethodsActivity]. Defaults to true.
+         */
+        fun setCanDeletePaymentMethods(canDeletePaymentMethods: Boolean): Builder = apply {
+            this.canDeletePaymentMethods = canDeletePaymentMethods
         }
 
         /**
@@ -264,7 +278,8 @@ data class PaymentSessionConfig internal constructor(
                 shippingMethodsFactory = shippingMethodsFactory,
                 windowFlags = windowFlags,
                 billingAddressFields = billingAddressFields,
-                shouldPrefetchCustomer = shouldPrefetchCustomer
+                shouldPrefetchCustomer = shouldPrefetchCustomer,
+                canDeletePaymentMethods = canDeletePaymentMethods
             )
         }
     }

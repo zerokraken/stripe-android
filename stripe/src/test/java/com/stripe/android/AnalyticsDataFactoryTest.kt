@@ -12,7 +12,6 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import org.junit.runner.RunWith
-import org.mockito.Mockito.`when`
 import org.mockito.Mockito.mock
 import org.robolectric.RobolectricTestRunner
 
@@ -155,7 +154,6 @@ class AnalyticsDataFactoryTest {
     }
 
     @Test
-    @Throws(PackageManager.NameNotFoundException::class)
     fun getEventLoggingParams_withProductUsage_createsAllFields() {
         // Correctness of these methods will be tested elsewhere. Assume validity for this test.
         val expectedEventName = AnalyticsEvent.TokenCreate.toString()
@@ -168,10 +166,8 @@ class AnalyticsDataFactoryTest {
             it.versionCode = versionCode
             it.packageName = BuildConfig.LIBRARY_PACKAGE_NAME
         }
-        `when`(packageManager.getPackageInfo(packageName, 0))
-            .thenReturn(packageInfo)
 
-        val params = AnalyticsDataFactory(packageManager, packageName, API_KEY)
+        val params = AnalyticsDataFactory(packageManager, packageInfo, packageName, API_KEY)
             .createTokenCreationParams(
                 ATTRIBUTION,
                 Token.TokenType.CARD
@@ -186,7 +182,6 @@ class AnalyticsDataFactoryTest {
         assertEquals(versionCode, params[AnalyticsDataFactory.FIELD_APP_VERSION])
         assertEquals(BuildConfig.LIBRARY_PACKAGE_NAME, params[AnalyticsDataFactory.FIELD_APP_NAME])
 
-        // The @Config constants param means BuildConfig constants are the same in prod as in test.
         assertEquals(BuildConfig.VERSION_NAME, params[AnalyticsDataFactory.FIELD_BINDINGS_VERSION])
         assertEquals(expectedEventName, params[AnalyticsDataFactory.FIELD_EVENT])
         assertEquals(expectedUaName, params[AnalyticsDataFactory.FIELD_ANALYTICS_UA])
@@ -212,7 +207,6 @@ class AnalyticsDataFactoryTest {
         assertNotNull(params[AnalyticsDataFactory.FIELD_OS_RELEASE])
         assertNotNull(params[AnalyticsDataFactory.FIELD_OS_NAME])
 
-        // The @Config constants param means BuildConfig constants are the same in prod as in test.
         assertEquals(BuildConfig.VERSION_NAME, params[AnalyticsDataFactory.FIELD_BINDINGS_VERSION])
         assertEquals(expectedEventName, params[AnalyticsDataFactory.FIELD_EVENT])
         assertEquals(expectedUaName, params[AnalyticsDataFactory.FIELD_ANALYTICS_UA])
@@ -221,27 +215,22 @@ class AnalyticsDataFactoryTest {
     }
 
     @Test
-    fun addNameAndVersion_whenApplicationContextIsNull_addsNoContextValues() {
-        val paramsMap =
-            AnalyticsDataFactory(null, null, API_KEY)
-                .createNameAndVersionParams()
-        assertEquals(AnalyticsDataFactory.NO_CONTEXT, paramsMap[AnalyticsDataFactory.FIELD_APP_NAME])
-        assertEquals(AnalyticsDataFactory.NO_CONTEXT, paramsMap[AnalyticsDataFactory.FIELD_APP_VERSION])
+    fun createAppDataParams_whenPackageNameIsEmpty_returnsEmptyMap() {
+        assertThat(
+            AnalyticsDataFactory(null, null, "", API_KEY)
+                .createAppDataParams()
+        ).isEmpty()
     }
 
     @Test
-    @Throws(PackageManager.NameNotFoundException::class)
-    fun addNameAndVersion_whenPackageInfoNotFound_addsUnknownValues() {
+    fun createAppDataParams_whenPackageInfoNotFound_returnsEmptyMap() {
         val packageName = "dummy_name"
         val manager = mock(PackageManager::class.java)
 
-        `when`(manager.getPackageInfo(packageName, 0))
-            .thenThrow(PackageManager.NameNotFoundException())
-
-        val paramsMap = AnalyticsDataFactory(manager, packageName, API_KEY)
-            .createNameAndVersionParams()
-        assertEquals(AnalyticsDataFactory.UNKNOWN, paramsMap[AnalyticsDataFactory.FIELD_APP_NAME])
-        assertEquals(AnalyticsDataFactory.UNKNOWN, paramsMap[AnalyticsDataFactory.FIELD_APP_VERSION])
+        assertThat(
+            AnalyticsDataFactory(manager, null, packageName, API_KEY)
+                .createAppDataParams()
+        ).isEmpty()
     }
 
     @Test

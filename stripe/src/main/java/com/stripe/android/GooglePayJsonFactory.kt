@@ -129,7 +129,7 @@ class GooglePayJsonFactory constructor(
         transactionInfo: TransactionInfo
     ): JSONObject {
         return JSONObject()
-            .put("currencyCode", transactionInfo.currencyCode)
+            .put("currencyCode", transactionInfo.currencyCode.toUpperCase(Locale.ROOT))
             .put("totalPriceStatus", transactionInfo.totalPriceStatus.code)
             .apply {
                 transactionInfo.countryCode?.let {
@@ -162,10 +162,14 @@ class GooglePayJsonFactory constructor(
         shippingAddressParameters: ShippingAddressParameters
     ): JSONObject {
         return JSONObject()
-            .put("allowedCountryCodes",
-                JSONArray(shippingAddressParameters.allowedCountryCodes))
-            .put("phoneNumberRequired",
-                shippingAddressParameters.phoneNumberRequired)
+            .put(
+                "allowedCountryCodes",
+                JSONArray(shippingAddressParameters.normalizedAllowedCountryCodes)
+            )
+            .put(
+                "phoneNumberRequired",
+                shippingAddressParameters.phoneNumberRequired
+            )
     }
 
     private fun createCardPaymentMethod(
@@ -335,16 +339,26 @@ class GooglePayJsonFactory constructor(
          * ISO 3166-1 alpha-2 country code values of the countries where shipping is allowed.
          * If this object isn't specified, all shipping address countries are allowed.
          */
-        internal val allowedCountryCodes: Set<String> = emptySet(),
+        private val allowedCountryCodes: Set<String> = emptySet(),
 
         /**
          * Set to true if a phone number is required for the provided shipping address.
          */
         internal val phoneNumberRequired: Boolean = false
     ) : Parcelable {
+        /**
+         * Normalized form of [allowedCountryCodes] (i.e. capitalized country codes)
+         */
+        internal val normalizedAllowedCountryCodes: Set<String>
+            get() {
+                return allowedCountryCodes.map {
+                    it.toUpperCase(Locale.ROOT)
+                }.toSet()
+            }
+
         init {
             val countryCodes = Locale.getISOCountries()
-            allowedCountryCodes.forEach { allowedShippingCountryCode ->
+            normalizedAllowedCountryCodes.forEach { allowedShippingCountryCode ->
                 require(
                     countryCodes.any { allowedShippingCountryCode == it }
                 ) {
@@ -367,7 +381,7 @@ class GooglePayJsonFactory constructor(
         internal val merchantName: String? = null
     ) : Parcelable
 
-    companion object {
+    private companion object {
         private const val API_VERSION = 2
         private const val API_VERSION_MINOR = 0
 
@@ -375,7 +389,7 @@ class GooglePayJsonFactory constructor(
 
         private val ALLOWED_AUTH_METHODS = listOf("PAN_ONLY", "CRYPTOGRAM_3DS")
         private val DEFAULT_CARD_NETWORKS =
-            listOf("AMEX", "DISCOVER", "INTERAC", "MASTERCARD", "VISA")
+            listOf("AMEX", "DISCOVER", "MASTERCARD", "VISA")
         private const val JCB_CARD_NETWORK = "JCB"
     }
 }

@@ -2,6 +2,7 @@ package com.stripe.android
 
 import com.stripe.android.exception.APIConnectionException
 import com.stripe.android.exception.APIException
+import com.stripe.android.exception.InvalidRequestException
 import com.stripe.android.exception.StripeException
 import java.io.IOException
 import kotlinx.coroutines.CoroutineScope
@@ -19,29 +20,48 @@ internal abstract class ApiOperation<ResultType>(
 
     internal fun execute() {
         workScope.launch {
-            val resultWrapper: ResultWrapper<ResultType> = try {
-                ResultWrapper.create(getResult())
+            val result: Result<ResultType?> = try {
+                Result.success(getResult())
             } catch (e: StripeException) {
-                ResultWrapper.create(e)
+                Result.failure(e)
             } catch (e: JSONException) {
-                ResultWrapper.create(APIException(e))
+                Result.failure(APIException(e))
             } catch (e: IOException) {
-                ResultWrapper.create(APIConnectionException.create(e))
+                Result.failure(APIConnectionException.create(e))
+            } catch (e: IllegalArgumentException) {
+                Result.failure(
+                    InvalidRequestException(
+                        message = e.message,
+                        cause = e
+                    )
+                )
             }
 
+            // dispatch the API operation result to the main thread
             withContext(Main) {
-                dispatchResult(resultWrapper)
+                dispatchResult(result)
             }
         }
     }
 
-    private fun dispatchResult(resultWrapper: ResultWrapper<ResultType>) {
-        when {
-            resultWrapper.result != null -> callback.onSuccess(resultWrapper.result)
-            resultWrapper.error != null -> callback.onError(resultWrapper.error)
-            else -> callback.onError(
-                RuntimeException("The API operation returned neither a result or exception")
-            )
-        }
+    private fun dispatchResult(result: Result<ResultType?>) {
+        result.fold(
+            onSuccess = {
+                when {
+                    it != null -> callback.onSuccess(it)
+                    else -> callback.onError(
+                        RuntimeException("The API operation returned neither a result or exception")
+                    )
+                }
+            },
+            onFailure = { exception ->
+                callback.onError(
+                    when (exception) {
+                        is StripeException -> exception
+                        else -> RuntimeException(exception)
+                    }
+                )
+            }
+        )
     }
 }

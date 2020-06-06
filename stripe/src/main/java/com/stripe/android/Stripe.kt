@@ -30,6 +30,7 @@ import com.stripe.android.model.Source
 import com.stripe.android.model.SourceParams
 import com.stripe.android.model.StripeFile
 import com.stripe.android.model.StripeFileParams
+import com.stripe.android.model.StripeIntent
 import com.stripe.android.model.Token
 import com.stripe.android.model.TokenParams
 import com.stripe.android.view.AuthActivityStarter
@@ -145,6 +146,45 @@ class Stripe internal constructor(
                 apiKey = publishableKey,
                 stripeAccount = stripeAccountId
             )
+        )
+    }
+
+    /**
+     * Confirm and authenticate a [PaymentIntent] using the Alipay SDK
+     * @see <a href="https://intl.alipay.com/docs/ac/app/sdk_integration">Alipay Documentation</a>
+     *
+     * @param confirmPaymentIntentParams [ConfirmPaymentIntentParams] used to confirm the
+     * [PaymentIntent]
+     * @param clientSecret the [client_secret](https://stripe.com/docs/api/payment_intents/object#payment_intent_object-client_secret)
+     * @param authenticator a [AlipayAuthenticator] used to interface with the Alipay SDK
+     * @param stripeAccountId Optional, the Connect account to associate with this request.
+     * By default, will use the Connect account that was used to instantiate the `Stripe` object, if specified.
+     * @param callback a [ApiResultCallback] to receive the result or error
+     */
+    internal fun confirmAlipayPayment(
+        confirmPaymentIntentParams: ConfirmPaymentIntentParams,
+        authenticator: AlipayAuthenticator,
+        stripeAccountId: String? = this.stripeAccountId,
+        callback: ApiResultCallback<PaymentIntentResult>
+    ) {
+        paymentController.startConfirm(
+            confirmPaymentIntentParams,
+            ApiRequest.Options(
+                apiKey = publishableKey,
+                stripeAccount = stripeAccountId
+            ),
+            object : ApiResultCallback<StripeIntent> {
+                override fun onSuccess(result: StripeIntent) {
+                    paymentController.authenticateAlipay(
+                        result,
+                        stripeAccountId,
+                        authenticator,
+                        callback
+                    )
+                }
+
+                override fun onError(e: Exception) = callback.onError(e)
+            }
         )
     }
 
@@ -1083,74 +1123,6 @@ class Stripe internal constructor(
     }
 
     /**
-     * Create a [BankAccount] token asynchronously.
-     *
-     * See [Create a bank account token](https://stripe.com/docs/api/tokens/create_bank_account).
-     * `POST /v1/tokens`
-     *
-     * @param bankAccount the [BankAccount] used to create this token
-     * @param idempotencyKey optional, see [Idempotent Requests](https://stripe.com/docs/api/idempotent_requests)
-     * @param stripeAccountId Optional, the Connect account to associate with this request.
-     * By default, will use the Connect account that was used to instantiate the `Stripe` object, if specified.
-     * @param callback a [ApiResultCallback] to receive the result or error
-     */
-    @Deprecated("Use BankAccountTokenParams")
-    @UiThread
-    @JvmOverloads
-    fun createBankAccountToken(
-        bankAccount: BankAccount,
-        idempotencyKey: String? = null,
-        stripeAccountId: String? = this.stripeAccountId,
-        callback: ApiResultCallback<Token>
-    ) {
-        createToken(
-            bankAccount,
-            stripeAccountId,
-            idempotencyKey,
-            callback
-        )
-    }
-
-    /**
-     * Blocking method to create a [Token] for a [BankAccount]. Do not call this on
-     * the UI thread or your app will crash.
-     *
-     * See [Create a bank account token](https://stripe.com/docs/api/tokens/create_bank_account).
-     * `POST /v1/tokens`
-     *
-     * @param bankAccount the [BankAccount] to use for this token
-     * @param idempotencyKey optional, see [Idempotent Requests](https://stripe.com/docs/api/idempotent_requests)
-     *
-     * @return a [Token] that can be used for this [BankAccount]
-     *
-     * @throws AuthenticationException failure to properly authenticate yourself (check your key)
-     * @throws InvalidRequestException your request has invalid parameters
-     * @throws APIConnectionException failure to connect to Stripe's API
-     * @throws CardException should not be thrown with this type of token, but is theoretically
-     * possible given the underlying methods called
-     * @throws APIException any other type of problem (for instance, a temporary issue with
-     * Stripe's servers
-     */
-    @Deprecated("Use BankAccountTokenParams")
-    @Throws(AuthenticationException::class, InvalidRequestException::class,
-        APIConnectionException::class, CardException::class, APIException::class)
-    @WorkerThread
-    @JvmOverloads
-    fun createBankAccountTokenSynchronous(
-        bankAccount: BankAccount,
-        idempotencyKey: String? = null
-    ): Token? {
-        return stripeRepository.createToken(
-            bankAccount,
-            ApiRequest.Options(
-                apiKey = publishableKey,
-                stripeAccount = stripeAccountId,
-                idempotencyKey = idempotencyKey
-            )
-        )
-    }
-
-    /**
      * Create a PII token asynchronously.
      *
      * See [Create a PII account token](https://stripe.com/docs/api/tokens/create_pii).
@@ -1612,5 +1584,18 @@ class Stripe internal constructor(
          */
         @JvmStatic
         var appInfo: AppInfo? = null
+
+        /**
+         * [advancedFraudSignalsEnabled] determines whether additional device data is sent to Stripe
+         * for fraud prevention. By default, this property is set to `true`.
+         *
+         * Disabling this setting will reduce Stripe's ability to protect your business from
+         * fraudulent payments.
+         *
+         * For more details on the information we collect, visit
+         * [https://stripe.com/docs/disputes/prevention/advanced-fraud-detection](https://stripe.com/docs/disputes/prevention/advanced-fraud-detection)
+         */
+        @JvmStatic
+        var advancedFraudSignalsEnabled: Boolean = true
     }
 }

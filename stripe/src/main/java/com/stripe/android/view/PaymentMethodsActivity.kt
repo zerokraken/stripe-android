@@ -10,6 +10,7 @@ import androidx.lifecycle.ViewModelProvider
 import com.google.android.material.snackbar.Snackbar
 import com.stripe.android.CustomerSession
 import com.stripe.android.databinding.PaymentMethodsActivityBinding
+import com.stripe.android.exception.StripeException
 import com.stripe.android.model.PaymentMethod
 import com.stripe.android.view.i18n.TranslatorManager
 
@@ -65,7 +66,8 @@ class PaymentMethodsActivity : AppCompatActivity() {
             addableTypes = args.paymentMethodTypes,
             initiallySelectedPaymentMethodId = viewModel.selectedPaymentMethodId,
             shouldShowGooglePay = args.shouldShowGooglePay,
-            useGooglePay = args.useGooglePay
+            useGooglePay = args.useGooglePay,
+            canDeletePaymentMethods = args.canDeletePaymentMethods
         )
     }
 
@@ -130,12 +132,15 @@ class PaymentMethodsActivity : AppCompatActivity() {
 
         viewBinding.recycler.adapter = adapter
         viewBinding.recycler.paymentMethodSelectedCallback = { finishWithResult(it) }
-        viewBinding.recycler.attachItemTouchHelper(
-            PaymentMethodSwipeCallback(
-                this, adapter,
-                SwipeToDeleteCallbackListener(deletePaymentMethodDialogFactory)
+
+        if (args.canDeletePaymentMethods) {
+            viewBinding.recycler.attachItemTouchHelper(
+                PaymentMethodSwipeCallback(
+                    this, adapter,
+                    SwipeToDeleteCallbackListener(deletePaymentMethodDialogFactory)
+                )
             )
-        )
+        }
     }
 
     public override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
@@ -177,18 +182,23 @@ class PaymentMethodsActivity : AppCompatActivity() {
     }
 
     private fun fetchCustomerPaymentMethods() {
-        viewModel.getPaymentMethods().observe(this, Observer {
-            when (it) {
-                is PaymentMethodsViewModel.Result.Success -> {
-                    adapter.setPaymentMethods(it.paymentMethods)
+        viewModel.getPaymentMethods().observe(this, Observer { result ->
+            result.fold(
+                onSuccess = { adapter.setPaymentMethods(it) },
+                onFailure = {
+                    alertDisplayer.show(
+                        when (it) {
+                            is StripeException -> {
+                                TranslatorManager.getErrorMessageTranslator()
+                                    .translate(it.statusCode, it.message, it.stripeError)
+                            }
+                            else -> {
+                                it.message.orEmpty()
+                            }
+                        }
+                    )
                 }
-                is PaymentMethodsViewModel.Result.Error -> {
-                    val exception = it.exception
-                    val displayedError = TranslatorManager.getErrorMessageTranslator()
-                        .translate(exception.statusCode, exception.message, exception.stripeError)
-                    alertDisplayer.show(displayedError)
-                }
-            }
+            )
         })
     }
 

@@ -84,6 +84,7 @@ class PaymentSessionActivity : AppCompatActivity() {
                 .setWindowFlags(WindowManager.LayoutParams.FLAG_SECURE)
                 .setBillingAddressFields(BillingAddressFields.PostalCode)
                 .setShouldPrefetchCustomer(shouldPrefetchCustomer)
+                .setCanDeletePaymentMethods(true)
                 .build()
         )
         paymentSession.init(
@@ -282,10 +283,14 @@ class PaymentSessionActivity : AppCompatActivity() {
         )
 
         private val SHIPPING_METHODS = listOf(
-            ShippingMethod("UPS Ground", "ups-ground",
-                599, "USD", "Arrives in 3-5 days"),
-            ShippingMethod("FedEx Overnight", "fedex",
-                1499, "USD", "Arrives tomorrow")
+            ShippingMethod(
+                "UPS Ground", "ups-ground",
+                599, "USD", "Arrives in 3-5 days"
+            ),
+            ShippingMethod(
+                "FedEx Overnight", "fedex",
+                1499, "USD", "Arrives tomorrow"
+            )
         )
     }
 }

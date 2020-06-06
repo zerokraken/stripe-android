@@ -17,6 +17,9 @@ import java.util.Calendar
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.asCoroutineDispatcher
+import kotlinx.coroutines.cancelChildren
 
 /**
  * Represents a logged-in session of a single Customer.
@@ -27,8 +30,8 @@ class CustomerSession @VisibleForTesting internal constructor(
     context: Context,
     stripeRepository: StripeRepository,
     publishableKey: String,
-    stripeAccountId: String?,
-    private val threadPoolExecutor: ThreadPoolExecutor = createThreadPoolExecutor(),
+    internal val stripeAccountId: String?,
+    private val workDispatcher: CoroutineDispatcher = createCoroutineDispatcher(),
     private val operationIdFactory: OperationIdFactory = StripeOperationIdFactory(),
     private val timeSupplier: TimeSupplier = { Calendar.getInstance().timeInMillis },
     ephemeralKeyManagerFactory: EphemeralKeyManager.Factory
@@ -47,7 +50,7 @@ class CustomerSession @VisibleForTesting internal constructor(
                 publishableKey,
                 stripeAccountId
             ),
-            threadPoolExecutor,
+            workDispatcher,
             listeners
         )
     )
@@ -161,10 +164,7 @@ class CustomerSession @VisibleForTesting internal constructor(
     }
 
     /**
-     * Gets a cached customer, or `null` if the current customer has expired.
-     *
-     * @return the current value of [customer], or `null` if the customer object is
-     * expired.
+     * A cached [Customer], or `null` if the current customer has expired.
      */
     val cachedCustomer: Customer?
         get() {
@@ -454,6 +454,12 @@ class CustomerSession @VisibleForTesting internal constructor(
         }
     }
 
+    @JvmSynthetic
+    internal fun cancel() {
+        listeners.clear()
+        workDispatcher.cancelChildren()
+    }
+
     private fun <L : RetrievalListener?> getListener(operationId: String): L? {
         return listeners.remove(operationId) as L?
     }
@@ -561,7 +567,7 @@ class CustomerSession @VisibleForTesting internal constructor(
                 StripeApiRepository(context, publishableKey, appInfo),
                 publishableKey,
                 stripeAccountId,
-                createThreadPoolExecutor(),
+                createCoroutineDispatcher(),
                 operationIdFactory,
                 timeSupplier,
                 ephemeralKeyManagerFactory
@@ -612,31 +618,31 @@ class CustomerSession @VisibleForTesting internal constructor(
         @VisibleForTesting
         @JvmSynthetic
         internal fun clearInstance() {
-            instance?.listeners?.clear()
             cancelCallbacks()
             instance = null
         }
 
         /**
-         * End any async calls in process and will not invoke callback listeners.
-         * It will not clear the singleton instance of a [CustomerSession] so it can be
-         * safely used when a view is being removed/destroyed to avoid null pointer exceptions
-         * due to async operation delay.
+         * Cancel any in-flight [CustomerSession] operations.
+         * Their callback listeners will not be called.
          *
-         * No need to call [initCustomerSession] again after this operation.
+         * It will not clear the singleton [CustomerSession] instance.
+         *
+         * It is not necessary to call [initCustomerSession] after calling [cancelCallbacks].
          */
         @JvmStatic
         fun cancelCallbacks() {
-            instance?.threadPoolExecutor?.shutdownNow()
+            instance?.cancel()
         }
 
-        private fun createThreadPoolExecutor(): ThreadPoolExecutor {
+        private fun createCoroutineDispatcher(): CoroutineDispatcher {
             return ThreadPoolExecutor(
                 THREAD_POOL_SIZE,
                 THREAD_POOL_SIZE,
                 KEEP_ALIVE_TIME.toLong(),
                 KEEP_ALIVE_TIME_UNIT,
-                LinkedBlockingQueue())
+                LinkedBlockingQueue()
+            ).asCoroutineDispatcher()
         }
     }
 }

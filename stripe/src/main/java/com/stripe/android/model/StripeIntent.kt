@@ -29,11 +29,11 @@ interface StripeIntent : StripeModel {
      */
     val isLiveMode: Boolean
 
+    /**
+     * The expanded [PaymentMethod] represented by [paymentMethodId].
+     */
     val paymentMethod: PaymentMethod?
 
-    /**
-     * ID of the payment method used in this PaymentIntent.
-     */
     val paymentMethodId: String?
 
     /**
@@ -43,34 +43,23 @@ interface StripeIntent : StripeModel {
 
     val nextActionType: NextActionType?
 
-    val redirectData: RedirectData?
-
-    /**
-     * The client secret of this PaymentIntent. Used for client-side retrieval using a
-     * publishable key.
-     *
-     * The client secret can be used to complete a payment from your frontend. It should not be
-     * stored, logged, embedded in URLs, or exposed to anyone other than the customer. Make sure
-     * that you have TLS enabled on any page that includes the client secret.
-     *
-     * Refer to our docs to accept a payment and learn about how client_secret should be handled.
-     */
     val clientSecret: String?
 
-    val stripeSdkData: SdkData?
-
     val status: Status?
+
+    val nextActionData: NextActionData?
 
     fun requiresAction(): Boolean
 
     fun requiresConfirmation(): Boolean
 
     /**
-     * See [payment_intent.next_action_type](https://stripe.com/docs/api/payment_intents/object#payment_intent_object-next_action-type)
+     * Type of the next action to perform.
      */
     enum class NextActionType(val code: String) {
         RedirectToUrl("redirect_to_url"),
-        UseStripeSdk("use_stripe_sdk");
+        UseStripeSdk("use_stripe_sdk"),
+        DisplayOxxoDetails("display_oxxo_details");
 
         override fun toString(): String {
             return code
@@ -139,54 +128,71 @@ interface StripeIntent : StripeModel {
         }
     }
 
-    data class SdkData internal constructor(internal val data: Map<String, *>) {
-        internal val type: String = data[FIELD_TYPE] as String
+    sealed class NextActionData : StripeModel {
+        @Parcelize
+        data class DisplayOxxoDetails(
+            /**
+             * The timestamp after which the OXXO expires.
+             */
+            val expiresAfter: Int = 0,
 
-        val is3ds2: Boolean
-            get() = TYPE_3DS2 == type
+            /**
+             * The OXXO number.
+             */
+            val number: String? = null
+        ) : NextActionData()
 
-        val is3ds1: Boolean
-            get() = TYPE_3DS1 == type
+        /**
+         * Contains instructions for authenticating by redirecting your customer to another
+         * page or application.
+         */
+        @Parcelize
+        data class RedirectToUrl(
+            /**
+             * The URL you must redirect your customer to in order to authenticate.
+             */
+            val url: Uri,
+            /**
+             * If the customer does not exit their browser while authenticating, they will be redirected
+             * to this specified URL after completion.
+             */
+            val returnUrl: String?,
+            val mobileData: MobileData?
+        ) : NextActionData() {
 
-        private companion object {
-            private const val FIELD_TYPE = "type"
-
-            private const val TYPE_3DS2 = "stripe_3ds2_fingerprint"
-            private const val TYPE_3DS1 = "three_d_secure_redirect"
+            sealed class MobileData : StripeModel {
+                @Parcelize
+                data class Alipay(
+                    val data: String
+                ) : MobileData()
+            }
         }
-    }
-
-    @Parcelize
-    data class RedirectData internal constructor(
-        /**
-         * See [PaymentIntent.next_action.redirect_to_url.url](https://stripe.com/docs/api/payment_intents/object#payment_intent_object-next_action-redirect_to_url-url)
-         */
-        val url: Uri,
 
         /**
-         * See [PaymentIntent.next_action.redirect_to_url.return_url](https://stripe.com/docs/api/payment_intents/object#payment_intent_object-next_action-redirect_to_url-return_url)
+         * When confirming a [PaymentIntent] or [SetupIntent] with the Stripe SDK, the Stripe SDK
+         * depends on this property to invoke authentication flows. The shape of the contents is subject
+         * to change and is only intended to be used by the Stripe SDK.
          */
-        val returnUrl: String?
-    ) : Parcelable {
-        internal companion object {
-            internal const val FIELD_URL = "url"
-            internal const val FIELD_RETURN_URL = "return_url"
+        sealed class SdkData : NextActionData() {
+            @Parcelize
+            data class Use3DS1(
+                val url: String
+            ) : SdkData()
 
-            @JvmSynthetic
-            internal fun create(redirectToUrlHash: Map<*, *>): RedirectData? {
-                val urlObj = redirectToUrlHash[FIELD_URL]
-                val returnUrlObj = redirectToUrlHash[FIELD_RETURN_URL]
-                val url = if (urlObj is String) {
-                    urlObj.toString()
-                } else {
-                    null
-                }
-                val returnUrl = if (returnUrlObj is String) {
-                    returnUrlObj.toString()
-                } else {
-                    null
-                }
-                return url?.let { RedirectData(Uri.parse(it), returnUrl) }
+            @Parcelize
+            data class Use3DS2(
+                val source: String,
+                val serverName: String,
+                val transactionId: String,
+                val serverEncryption: DirectoryServerEncryption
+            ) : SdkData() {
+                @Parcelize
+                data class DirectoryServerEncryption(
+                    val directoryServerId: String,
+                    val dsCertificateData: String,
+                    val rootCertsData: List<String>,
+                    val keyId: String?
+                ) : Parcelable
             }
         }
     }
