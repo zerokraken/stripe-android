@@ -29,17 +29,6 @@ def getAccountId() {
     return readProperty('STRIPE_ACCOUNT_ID')
 }
 
-private def readProperty(name) {
-    final String propValue
-    if (hasProperty(name)) {
-        propValue = property(name)
-    } else {
-        propValue = System.getenv(name)
-    }
-
-    return propValue?.trim() ? propValue : ""
-}
-
 dependencies {
     implementation project(':stripe')
     implementation 'androidx.multidex:multidex:2.0.1'
@@ -73,7 +62,7 @@ dependencies {
 
     compile(name:"alipaySdk-15.7.5", ext:"aar")
 
-    ktlint "com.pinterest:ktlint:$ktlintVersion"
+    ktlint 'com.pinterest:ktlint:0.37.0'
 
     testImplementation "androidx.test:core:$androidTestVersion"
 
@@ -104,6 +93,17 @@ dependencies {
     androidTestImplementation "androidx.test.espresso:espresso-idling-resource:$espressoVersion"
 
     androidTestUtil "androidx.test:orchestrator:$androidTestVersion"
+}
+
+private def readProperty(name) {
+    final String propValue
+    if (hasProperty(name)) {
+        propValue = property(name)
+    } else {
+        propValue = System.getenv(name)
+    }
+
+    return propValue?.trim() ? propValue : ""
 }
 
 android {
