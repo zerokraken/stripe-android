@@ -23,6 +23,7 @@ class AlipayAuthenticationTaskTest {
         val task = StripePaymentController.AlipayAuthenticationTask(
             intent,
             createAuthenticator("9000"),
+            Logger.noop(),
             stripeRepository,
             requestOptions,
             callback
@@ -41,6 +42,7 @@ class AlipayAuthenticationTaskTest {
         val task = StripePaymentController.AlipayAuthenticationTask(
             intent,
             createAuthenticator("6001"),
+            Logger.noop(),
             stripeRepository,
             requestOptions,
             callback
@@ -55,6 +57,7 @@ class AlipayAuthenticationTaskTest {
         val task = StripePaymentController.AlipayAuthenticationTask(
             intent,
             createAuthenticator("4000"),
+            Logger.noop(),
             stripeRepository,
             requestOptions,
             callback
@@ -69,6 +72,7 @@ class AlipayAuthenticationTaskTest {
         val task = StripePaymentController.AlipayAuthenticationTask(
             intent,
             createAuthenticator("unknown"),
+            Logger.noop(),
             stripeRepository,
             requestOptions,
             callback
@@ -83,6 +87,7 @@ class AlipayAuthenticationTaskTest {
         val task = StripePaymentController.AlipayAuthenticationTask(
             intent,
             createAuthenticator(null),
+            Logger.noop(),
             stripeRepository,
             requestOptions,
             callback
@@ -97,6 +102,7 @@ class AlipayAuthenticationTaskTest {
         val task = StripePaymentController.AlipayAuthenticationTask(
             PaymentIntentFixtures.PI_REQUIRES_REDIRECT,
             createAuthenticator("9000"),
+            Logger.noop(),
             stripeRepository,
             requestOptions,
             callback

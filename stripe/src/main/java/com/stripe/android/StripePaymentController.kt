@@ -319,6 +319,7 @@ internal class StripePaymentController internal constructor(
         AlipayAuthenticationTask(
             intent,
             authenticator,
+            logger,
             stripeRepository,
             requestOptions,
             object : ApiResultCallback<AlipayAuthResult> {
@@ -347,6 +348,7 @@ internal class StripePaymentController internal constructor(
     internal class AlipayAuthenticationTask(
         private val intent: StripeIntent,
         private val authenticator: AlipayAuthenticator,
+        private val logger: Logger,
         private val apiRepository: StripeRepository,
         private val requestOptions: ApiRequest.Options,
         callback: ApiResultCallback<AlipayAuthResult>
@@ -356,12 +358,19 @@ internal class StripePaymentController internal constructor(
             if (nextActionData is RedirectToUrl && nextActionData.mobileData is AlipayData) {
                 val output =
                     authenticator.onAuthenticationRequest(nextActionData.mobileData.data)
-                //logger.debug("Alipay SDK Result:\n$output")
+                logger.debug("Alipay SDK Result:\n$output")
                 return AlipayAuthResult(
                     when (output[RESULT_FIELD]) {
                         RESULT_CODE_SUCCESS -> {
                             nextActionData.mobileData.authCompleteUrl?.let {
-                                apiRepository.retrieveObject(it, requestOptions)
+                                logger.debug("Making auth complete request to $it")
+                                runCatching {
+                                    val result = apiRepository.retrieveObject(it, requestOptions)
+                                    logger.debug("Recieved response $result")
+                                }.onFailure { error ->
+                                    logger.debug("Auth complete failed: ${error.message}")
+                                    logger.debug(error.stackTrace.joinToString { "\n" })
+                                }
                             }
                             StripeIntentResult.Outcome.SUCCEEDED
                         }
