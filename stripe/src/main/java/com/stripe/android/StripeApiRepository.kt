@@ -12,6 +12,7 @@ import com.stripe.android.exception.InvalidRequestException
 import com.stripe.android.exception.PermissionException
 import com.stripe.android.exception.RateLimitException
 import com.stripe.android.exception.StripeException
+import com.stripe.android.model.Complete3ds2Result
 import com.stripe.android.model.ConfirmPaymentIntentParams
 import com.stripe.android.model.ConfirmSetupIntentParams
 import com.stripe.android.model.Customer
@@ -24,6 +25,7 @@ import com.stripe.android.model.SetupIntent
 import com.stripe.android.model.ShippingInformation
 import com.stripe.android.model.Source
 import com.stripe.android.model.SourceParams
+import com.stripe.android.model.Stripe3ds2AuthParams
 import com.stripe.android.model.Stripe3ds2AuthResult
 import com.stripe.android.model.StripeFile
 import com.stripe.android.model.StripeFileParams
@@ -49,6 +51,7 @@ import kotlin.coroutines.CoroutineContext
 import kotlinx.coroutines.Dispatchers
 import org.json.JSONArray
 import org.json.JSONException
+import org.json.JSONObject
 
 /**
  * An implementation of [StripeRepository] that makes network requests to the Stripe API.
@@ -63,11 +66,9 @@ internal class StripeApiRepository @JvmOverloads internal constructor(
         AnalyticsRequestExecutor.Default(logger),
     private val fingerprintDataRepository: FingerprintDataRepository =
         FingerprintDataRepository.Default(context),
-    private val apiFingerprintParamsFactory: ApiFingerprintParamsFactory =
-        ApiFingerprintParamsFactory(context),
     private val analyticsDataFactory: AnalyticsDataFactory =
         AnalyticsDataFactory(context, publishableKey),
-    private val fingerprintParamsUtils: FingerprintParamsUtils = FingerprintParamsUtils(context),
+    private val fingerprintParamsUtils: FingerprintParamsUtils = FingerprintParamsUtils(),
     private val workContext: CoroutineContext = Dispatchers.IO,
     apiVersion: String = ApiVersion.get().code,
     sdkVersion: String = Stripe.VERSION
@@ -79,10 +80,8 @@ internal class StripeApiRepository @JvmOverloads internal constructor(
         sdkVersion = sdkVersion
     )
 
-    private val fingerprintGuid: String?
-        get() {
-            return fingerprintDataRepository.get()?.guid
-        }
+    private val fingerprintData: FingerprintData?
+        get() = fingerprintDataRepository.get()
 
     init {
         fireFingerprintRequest()
@@ -107,7 +106,7 @@ internal class StripeApiRepository @JvmOverloads internal constructor(
         val params = fingerprintParamsUtils.addFingerprintData(
             confirmPaymentIntentParams.toParamMap()
                 .plus(createExpandParam(expandFields)),
-            fingerprintGuid
+            fingerprintData
         )
         val apiUrl = getConfirmPaymentIntentUrl(
             PaymentIntent.ClientSecret(confirmPaymentIntentParams.clientSecret).paymentIntentId
@@ -238,7 +237,7 @@ internal class StripeApiRepository @JvmOverloads internal constructor(
                     fingerprintParamsUtils.addFingerprintData(
                         confirmSetupIntentParams.toParamMap()
                             .plus(createExpandParam(expandFields)),
-                        fingerprintGuid
+                        fingerprintData
                     )
                 ),
                 SetupIntentJsonParser()
@@ -370,7 +369,7 @@ internal class StripeApiRepository @JvmOverloads internal constructor(
                     sourcesUrl,
                     options,
                     sourceParams.toParamMap()
-                        .plus(apiFingerprintParamsFactory.createParams(fingerprintGuid))
+                        .plus(fingerprintData?.params.orEmpty())
                 ),
                 SourceJsonParser()
             )
@@ -443,7 +442,7 @@ internal class StripeApiRepository @JvmOverloads internal constructor(
                     paymentMethodsUrl,
                     options,
                     paymentMethodCreateParams.toParamMap()
-                        .plus(apiFingerprintParamsFactory.createParams(fingerprintGuid))
+                        .plus(fingerprintData?.params.orEmpty())
                 ),
                 PaymentMethodJsonParser()
             )
@@ -496,11 +495,7 @@ internal class StripeApiRepository @JvmOverloads internal constructor(
                 tokensUrl,
                 options,
                 tokenParams.toParamMap()
-                    .plus(
-                        apiFingerprintParamsFactory.createParams(
-                            fingerprintGuid
-                        )
-                    )
+                    .plus(fingerprintData?.params.orEmpty())
             ),
             TokenJsonParser()
         )
@@ -858,7 +853,10 @@ internal class StripeApiRepository @JvmOverloads internal constructor(
     @VisibleForTesting
     @Throws(InvalidRequestException::class, APIConnectionException::class, APIException::class,
         CardException::class, AuthenticationException::class)
-    internal fun complete3ds2Auth(sourceId: String, requestOptions: ApiRequest.Options): Boolean {
+    internal fun complete3ds2Auth(
+        sourceId: String,
+        requestOptions: ApiRequest.Options
+    ): Complete3ds2Result {
         val response = makeApiRequest(
             apiRequestFactory.createPost(
                 getApiUrl("3ds2/challenge_complete"),
@@ -866,13 +864,13 @@ internal class StripeApiRepository @JvmOverloads internal constructor(
                 mapOf("source" to sourceId)
             )
         )
-        return response.isOk
+        return Complete3ds2Result(response.isOk)
     }
 
     override fun complete3ds2Auth(
         sourceId: String,
         requestOptions: ApiRequest.Options,
-        callback: ApiResultCallback<Boolean>
+        callback: ApiResultCallback<Complete3ds2Result>
     ) {
         Complete3ds2AuthTask(this, sourceId, requestOptions, callback)
             .execute()
@@ -890,6 +888,14 @@ internal class StripeApiRepository @JvmOverloads internal constructor(
         )
         fireAnalyticsRequest(AnalyticsEvent.FileCreate, requestOptions.apiKey)
         return StripeFileJsonParser().parse(response.responseJson)
+    }
+
+    override fun retrieveObject(url: String, requestOptions: ApiRequest.Options): JSONObject {
+        val response = makeApiRequest(apiRequestFactory.createGet(
+            url,
+            requestOptions
+        ))
+        return response.responseJson
     }
 
     /**
@@ -1063,10 +1069,10 @@ internal class StripeApiRepository @JvmOverloads internal constructor(
         private val stripeApiRepository: StripeApiRepository,
         private val sourceId: String,
         private val requestOptions: ApiRequest.Options,
-        callback: ApiResultCallback<Boolean>
-    ) : ApiOperation<Boolean>(callback = callback) {
+        callback: ApiResultCallback<Complete3ds2Result>
+    ) : ApiOperation<Complete3ds2Result>(callback = callback) {
         @Throws(StripeException::class)
-        override suspend fun getResult(): Boolean {
+        override suspend fun getResult(): Complete3ds2Result {
             return stripeApiRepository.complete3ds2Auth(sourceId, requestOptions)
         }
     }

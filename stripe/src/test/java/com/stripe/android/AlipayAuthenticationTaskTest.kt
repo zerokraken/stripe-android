@@ -2,6 +2,8 @@ package com.stripe.android
 
 import com.google.common.truth.Truth.assertThat
 import com.nhaarman.mockitokotlin2.mock
+import com.nhaarman.mockitokotlin2.verify
+import com.stripe.android.model.AlipayAuthResult
 import com.stripe.android.model.PaymentIntentFixtures
 import kotlin.test.assertFailsWith
 import kotlinx.coroutines.runBlocking
@@ -12,18 +14,26 @@ import org.robolectric.RobolectricTestRunner
 @RunWith(RobolectricTestRunner::class)
 class AlipayAuthenticationTaskTest {
     private val intent = PaymentIntentFixtures.ALIPAY_REQUIRES_ACTION
-    private val callback: ApiResultCallback<Int> = mock()
+    private val stripeRepository: StripeRepository = mock()
+    private val requestOptions = ApiRequest.Options("public_key")
+    private val callback: ApiResultCallback<AlipayAuthResult> = mock()
 
     @Test
     fun `AlipayAuthenticationTask should handle success`() {
         val task = StripePaymentController.AlipayAuthenticationTask(
             intent,
             createAuthenticator("9000"),
-            Logger.noop(),
+            stripeRepository,
+            requestOptions,
             callback
         )
         val result = runBlocking { task.getResult() }
-        assertThat(result).isEqualTo(StripeIntentResult.Outcome.SUCCEEDED)
+        assertThat(result.outcome)
+            .isEqualTo(StripeIntentResult.Outcome.SUCCEEDED)
+        verify(stripeRepository).retrieveObject(
+            "https://hooks.stripe.com/adapter/alipay/redirect/complete/src_1Gt188KlwPmebFhp4SWhZwn1/src_client_secret_RMaQKPfAmHOdUwcNhXEjolR4",
+            requestOptions
+        )
     }
 
     @Test
@@ -31,11 +41,13 @@ class AlipayAuthenticationTaskTest {
         val task = StripePaymentController.AlipayAuthenticationTask(
             intent,
             createAuthenticator("6001"),
-            Logger.noop(),
+            stripeRepository,
+            requestOptions,
             callback
         )
         val result = runBlocking { task.getResult() }
-        assertThat(result).isEqualTo(StripeIntentResult.Outcome.CANCELED)
+        assertThat(result?.outcome)
+            .isEqualTo(StripeIntentResult.Outcome.CANCELED)
     }
 
     @Test
@@ -43,11 +55,13 @@ class AlipayAuthenticationTaskTest {
         val task = StripePaymentController.AlipayAuthenticationTask(
             intent,
             createAuthenticator("4000"),
-            Logger.noop(),
+            stripeRepository,
+            requestOptions,
             callback
         )
         val result = runBlocking { task.getResult() }
-        assertThat(result).isEqualTo(StripeIntentResult.Outcome.FAILED)
+        assertThat(result?.outcome)
+            .isEqualTo(StripeIntentResult.Outcome.FAILED)
     }
 
     @Test
@@ -55,11 +69,13 @@ class AlipayAuthenticationTaskTest {
         val task = StripePaymentController.AlipayAuthenticationTask(
             intent,
             createAuthenticator("unknown"),
-            Logger.noop(),
+            stripeRepository,
+            requestOptions,
             callback
         )
         val result = runBlocking { task.getResult() }
-        assertThat(result).isEqualTo(StripeIntentResult.Outcome.UNKNOWN)
+        assertThat(result?.outcome)
+            .isEqualTo(StripeIntentResult.Outcome.UNKNOWN)
     }
 
     @Test
@@ -67,11 +83,13 @@ class AlipayAuthenticationTaskTest {
         val task = StripePaymentController.AlipayAuthenticationTask(
             intent,
             createAuthenticator(null),
-            Logger.noop(),
+            stripeRepository,
+            requestOptions,
             callback
         )
         val result = runBlocking { task.getResult() }
-        assertThat(result).isEqualTo(StripeIntentResult.Outcome.UNKNOWN)
+        assertThat(result?.outcome)
+            .isEqualTo(StripeIntentResult.Outcome.UNKNOWN)
     }
 
     @Test
@@ -79,7 +97,8 @@ class AlipayAuthenticationTaskTest {
         val task = StripePaymentController.AlipayAuthenticationTask(
             PaymentIntentFixtures.PI_REQUIRES_REDIRECT,
             createAuthenticator("9000"),
-            Logger.noop(),
+            stripeRepository,
+            requestOptions,
             callback
         )
         assertFailsWith<RuntimeException> {

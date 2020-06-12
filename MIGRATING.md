@@ -2,9 +2,86 @@
 
 ## Migrating from versions < 15.0.0
 - The SDK now targets JVM 1.8
+- Changes to `PaymentIntent`
+    - `PaymentIntent#captureMethod` is now an enum, `PaymentIntent.CaptureMethod`
+        ```kotlin
+        // before
+        if (paymentIntent.captureMethod == "automatic") {
+
+        } else if (paymentIntent.captureMethod == "manual") {
+
+        }
+
+        // after
+        when (paymentIntent.captureMethod) {
+            PaymentIntent.CaptureMethod.Automatic -> {}
+            PaymentIntent.CaptureMethod.Manual -> {}
+        }
+        ```
+    - `PaymentIntent#confirmationMethod` is now an enum, `PaymentIntent.ConfirmationMethod`
+        ```kotlin
+        // before
+        if (paymentIntent.confirmationMethod == "automatic") {
+
+        } else if (paymentIntent.confirmationMethod == "manual") {
+
+        }
+
+        // after
+        when (paymentIntent.confirmationMethod) {
+            PaymentIntent.ConfirmationMethod.Automatic -> {}
+            PaymentIntent.ConfirmationMethod.Manual -> {}
+        }
+        ```
+- Changes to `PaymentMethod`
+    - `PaymentMethod.Card#brand` is now a `CardBrand`
+        ```kotlin
+        // before
+        when (paymentMethod.card?.brand) {
+            "visa" -> {}
+            "mastercard" -> {}
+            else -> {}
+        }
+
+        // after
+        when (paymentMethod.card?.brand) {
+            CardBrand.Visa -> {}
+            CardBrand.MasterCard -> {}
+            else -> {}
+        }
+        ```
+- Changes to `Token`
+    - `Token.TokenType` is renamed to `Token.Type` and is now an enum
+        ```kotlin
+        // before
+        when (token.type) {
+            Token.TokenType.CARD -> {}
+            Token.TokenType.BANK_ACCOUNT -> {}
+            else -> {}
+        }
+
+        // after
+        when (token.type) {
+            Token.Type.Card -> {}
+            Token.Type.BankAccount -> {}
+            else -> {}
+        }
+        ```
 - Changes to `AddPaymentMethodActivity`
     - When `CustomerSession` is instantiated with a `stripeAccountId`, it will be used in `AddPaymentMethodActivity`
       when creating a payment method
+- Changes to `Source`
+    - `Source.SourceFlow` has been renamed to `Source.Flow` and is now an enum
+    - `Source.SourceStatus` has been renamed to `Source.Status` and is now an enum
+    - `Source.Usage` is now an enum
+    - `SourceCodeVerification` has been moved to `Source.CodeVerification`
+    - `SourceOwner` has been moved to `Source.Owner`
+    - `SourceReceiver` has been moved to `Source.Receiver`
+    - `SourceRedirect` has been moved to `Source.Redirect`
+- Changes to `CustomerSource`
+    - `CustomerSource#tokenizationMethod` is now a `TokenizationMethod?`
+- Changes to `SourceTypeModel.Card`
+    - `SourceTypeModel.Card.ThreeDSecureStatus` is now an enum
 - Changes to `BankAccount`
     - public constructors have been removed
     - `BankAccount#accountNumber` has been removed
@@ -15,6 +92,8 @@
 - Changes to `AccountParams`
     - Remove `AccountParams.create()` that takes a raw map; instead, use `create()` method that takes a
       `AccountParams.BusinessTypeParams.Individual` or `AccountParams.BusinessTypeParams.Company`
+- Changes to `CardInputListener`
+    - `FocusField` is now an enum
 
 ## Migrating from versions < 14.5.0
 - Changes to `StripeIntent`

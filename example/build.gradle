@@ -55,14 +55,14 @@ dependencies {
     //noinspection GradleDependency
     implementation 'com.squareup.okhttp3:logging-interceptor:3.12.3'
 
-    debugImplementation 'com.squareup.leakcanary:leakcanary-android:2.3'
+    debugImplementation 'com.squareup.leakcanary:leakcanary-android:2.4'
 
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinCoroutinesVersion"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:$kotlinCoroutinesVersion"
 
     implementation(name:"alipaySdk-15.7.5", ext:"aar")
 
-    ktlint 'com.pinterest:ktlint:0.37.0'
+    ktlint 'com.pinterest:ktlint:0.37.1'
 
     testImplementation "androidx.test:core:$androidTestVersion"
 

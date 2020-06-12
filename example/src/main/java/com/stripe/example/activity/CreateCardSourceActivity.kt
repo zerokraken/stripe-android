@@ -126,9 +126,8 @@ class CreateCardSourceActivity : AppCompatActivity() {
         // Making a note of the Card Source in our list.
         sourcesAdapter.addSource(source)
 
-        // If we need to get 3DS verification for this card, we first create a
-        // 3DS Source.
-        if (SourceTypeModel.Card.ThreeDSecureStatus.REQUIRED == cardData.threeDSecureStatus) {
+        // If we need to get 3DS verification for this card, we first create a 3DS Source.
+        if (SourceTypeModel.Card.ThreeDSecureStatus.Required == cardData.threeDSecureStatus) {
             // The card Source can be used to create a 3DS Source
             createThreeDSecureSource(source)
         }
@@ -169,7 +168,7 @@ class CreateCardSourceActivity : AppCompatActivity() {
      * Authenticate the [Source]
      */
     private fun authenticateSource(source: Source) {
-        if (source.flow == Source.SourceFlow.REDIRECT) {
+        if (source.flow == Source.Flow.Redirect) {
             createAuthenticateSourceDialog(source).let {
                 alertDialog = it
                 it.show()

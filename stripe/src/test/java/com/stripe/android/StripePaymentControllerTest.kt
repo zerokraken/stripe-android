@@ -19,12 +19,14 @@ import com.nhaarman.mockitokotlin2.verifyNoMoreInteractions
 import com.nhaarman.mockitokotlin2.whenever
 import com.stripe.android.exception.APIException
 import com.stripe.android.exception.InvalidRequestException
+import com.stripe.android.model.Complete3ds2Result
 import com.stripe.android.model.ConfirmPaymentIntentParams
 import com.stripe.android.model.PaymentIntentFixtures
 import com.stripe.android.model.SetupIntent
 import com.stripe.android.model.SetupIntentFixtures
 import com.stripe.android.model.Source
 import com.stripe.android.model.SourceFixtures
+import com.stripe.android.model.Stripe3ds2AuthParams
 import com.stripe.android.model.Stripe3ds2AuthResult
 import com.stripe.android.model.Stripe3ds2AuthResultFixtures
 import com.stripe.android.model.Stripe3ds2Fingerprint
@@ -712,7 +714,7 @@ class StripePaymentControllerTest {
         )
         verify(sourceCallback).onSuccess(sourceArgumentCaptor.capture())
         assertEquals(
-            Source.SourceStatus.CHARGEABLE,
+            Source.Status.Chargeable,
             sourceArgumentCaptor.firstValue.status
         )
 
@@ -724,7 +726,7 @@ class StripePaymentControllerTest {
         controller.startAuthenticateSource(
             host = host,
             source = SourceFixtures.SOURCE_WITH_SOURCE_ORDER.copy(
-                flow = Source.SourceFlow.NONE
+                flow = Source.Flow.None
             ),
             requestOptions = REQUEST_OPTIONS
         )
@@ -804,9 +806,9 @@ class StripePaymentControllerTest {
         override fun complete3ds2Auth(
             sourceId: String,
             requestOptions: ApiRequest.Options,
-            callback: ApiResultCallback<Boolean>
+            callback: ApiResultCallback<Complete3ds2Result>
         ) {
-            callback.onSuccess(true)
+            callback.onSuccess(Complete3ds2Result(true))
         }
 
         override fun retrieveIntent(
@@ -826,7 +828,7 @@ class StripePaymentControllerTest {
             callback: ApiResultCallback<Source>
         ) {
             callback.onSuccess(
-                SourceFixtures.SOURCE_CARD.copy(status = Source.SourceStatus.CHARGEABLE)
+                SourceFixtures.SOURCE_CARD.copy(status = Source.Status.Chargeable)
             )
         }
     }

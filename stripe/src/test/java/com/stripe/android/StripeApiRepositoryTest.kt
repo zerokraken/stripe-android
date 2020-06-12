@@ -28,6 +28,7 @@ import com.stripe.android.model.PaymentMethodCreateParamsFixtures
 import com.stripe.android.model.PaymentMethodFixtures
 import com.stripe.android.model.SourceFixtures
 import com.stripe.android.model.SourceParams
+import com.stripe.android.model.Stripe3ds2AuthParams
 import com.stripe.android.model.StripeFileFixtures
 import com.stripe.android.model.StripeFileParams
 import com.stripe.android.model.StripeFilePurpose
@@ -80,10 +81,7 @@ class StripeApiRepositoryTest {
     @BeforeTest
     fun before() {
         whenever(fingerprintDataRepository.get()).thenReturn(
-            FingerprintData(
-                guid = UUID.randomUUID().toString(),
-                timestamp = Calendar.getInstance().timeInMillis
-            )
+            FingerprintDataFixtures.create(Calendar.getInstance().timeInMillis)
         )
 
         whenever(stripeApiRequestExecutor.execute(any<FileUploadRequest>()))
@@ -908,11 +906,7 @@ class StripeApiRepositoryTest {
             stripeApiRequestExecutor = stripeApiRequestExecutor,
             analyticsRequestExecutor = analyticsRequestExecutor,
             fingerprintDataRepository = fingerprintDataRepository,
-            fingerprintParamsUtils = FingerprintParamsUtils(
-                ApiFingerprintParamsFactory(
-                    store = FakeClientFingerprintDataStore()
-                )
-            )
+            fingerprintParamsUtils = FingerprintParamsUtils()
         )
     }
 
