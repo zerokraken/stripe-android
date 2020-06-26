@@ -25,7 +25,7 @@ import org.json.JSONObject
  * in order to display state of the interaction.
  */
 abstract class StripeIntentActivity : AppCompatActivity() {
-    internal val viewModel: StripeIntentViewModel by lazy {
+    val viewModel: StripeIntentViewModel by lazy {
         ViewModelProvider(
             this,
             ViewModelProvider.AndroidViewModelFactory(application)
@@ -137,7 +137,8 @@ abstract class StripeIntentActivity : AppCompatActivity() {
             ConfirmPaymentIntentParams.createWithPaymentMethodId(
                 paymentMethodId = existingPaymentMethodId,
                 clientSecret = secret,
-                mandateData = mandateDataParams
+                mandateData = mandateDataParams,
+                returnUrl = "example://return_url"
             )
         }
         stripe.confirmPayment(this, confirmPaymentIntentParams, stripeAccountId)

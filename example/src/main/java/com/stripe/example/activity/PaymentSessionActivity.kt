@@ -125,7 +125,7 @@ class PaymentSessionActivity : AppCompatActivity() {
                 .setHiddenShippingInfoFields()
                 // Optionally specify the `PaymentMethod.Type` values to use.
                 // Defaults to `PaymentMethod.Type.Card`
-                .setPaymentMethodTypes(listOf(PaymentMethod.Type.Card))
+                .setPaymentMethodTypes(listOf(PaymentMethod.Type.Fpx))
                 .setShouldShowGooglePay(true)
                 .setAllowedShippingCountryCodes(setOf("US", "CA"))
                 .setShippingInformationValidator(ShippingInformationValidator())

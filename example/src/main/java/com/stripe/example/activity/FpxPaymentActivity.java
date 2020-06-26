@@ -6,7 +6,6 @@ import android.view.View;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
 import com.stripe.android.PaymentConfiguration;
@@ -19,15 +18,20 @@ import com.stripe.example.databinding.FpxPaymentActivityBinding;
 
 import java.util.Objects;
 
-public class FpxPaymentActivity extends AppCompatActivity {
+public class FpxPaymentActivity extends StripeIntentActivity {
 
     private FpxPaymentActivityBinding viewBinding;
+    private String paymentMethodId = null;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
         viewBinding = FpxPaymentActivityBinding.inflate(getLayoutInflater());
+
+        getViewModel().getStatus().observe(this, status -> {
+            status.toString();
+        });
 
         setContentView(viewBinding.getRoot());
         setTitle(R.string.fpx_payment_example);
@@ -39,9 +43,24 @@ public class FpxPaymentActivity extends AppCompatActivity {
 
         viewBinding.selectPaymentMethodButton
                 .setOnClickListener(view -> launchAddPaymentMethod());
+
+        viewBinding.confirmPaymentIntent
+                .setOnClickListener(view -> {
+                            viewBinding.progressBar.setVisibility(View.VISIBLE);
+                            createAndConfirmPaymentIntent(
+                                    "my",
+                                    null,
+                                    null,
+                                    null,
+                                    paymentMethodId,
+                                    null
+                            );
+                        }
+                );
     }
 
     private void launchAddPaymentMethod() {
+        viewBinding.progressBar.setVisibility(View.VISIBLE);
         new AddPaymentMethodActivityStarter(this)
                 .startForResult(new AddPaymentMethodActivityStarter.Args.Builder()
                         .setPaymentMethodType(PaymentMethod.Type.Fpx)
@@ -63,6 +82,8 @@ public class FpxPaymentActivity extends AppCompatActivity {
     }
 
     private void onPaymentMethodResult(@NonNull PaymentMethod paymentMethod) {
+        this.paymentMethodId = paymentMethod.id;
+
         final String fpxBankCode = Objects.requireNonNull(paymentMethod.fpx).bank;
         final String resultMessage = "Created Payment Method\n" +
                 "\nType: " + paymentMethod.type +
