@@ -552,7 +552,7 @@ data class PaymentMethodCreateParams internal constructor(
 
         @JvmSynthetic
         @JvmOverloads
-        internal fun createOxxo(
+        fun createOxxo(
             billingDetails: PaymentMethod.BillingDetails,
             metadata: Map<String, String>? = null
         ): PaymentMethodCreateParams {
