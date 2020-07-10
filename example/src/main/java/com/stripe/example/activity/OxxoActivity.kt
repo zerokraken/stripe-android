@@ -2,26 +2,21 @@ package com.stripe.example.activity
 
 import android.os.Bundle
 import android.view.View
-import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.Observer
-import com.stripe.android.model.PaymentMethod
-import com.stripe.android.model.PaymentMethodCreateParams
+import androidx.lifecycle.ViewModelProvider
 import com.stripe.example.databinding.ActivityOxxoBinding
+import com.stripe.example.module.StripeIntentViewModel
 
-class OxxoActivity : StripeIntentActivity() {
+class OxxoActivity : AppCompatActivity() {
+    private val viewModel: StripeIntentViewModel by lazy {
+        ViewModelProvider(
+            this,
+            ViewModelProvider.AndroidViewModelFactory(application)
+        )[StripeIntentViewModel::class.java]
+    }
     private val viewBinding by lazy {
         ActivityOxxoBinding.inflate(layoutInflater)
-    }
-
-    private val billingDetails: PaymentMethod.BillingDetails?
-    get() {
-        val name = viewBinding.name.text
-        val email = viewBinding.email.text
-        if (name.isNullOrBlank() || email.isNullOrBlank()) {
-            return null
-        } else {
-            return PaymentMethod.BillingDetails(name = name.toString(), email = email.toString())
-        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -31,10 +26,42 @@ class OxxoActivity : StripeIntentActivity() {
         viewModel.status.observe(this, Observer(viewBinding.status::setText))
 
         viewBinding.confirm.setOnClickListener {
-            billingDetails?.let {
-                createAndConfirmPaymentIntent("mx", PaymentMethodCreateParams.createOxxo(it))
-            } ?: Toast.makeText(this@OxxoActivity, "Missing details!", Toast.LENGTH_LONG).show()
+            startCheckout()
         }
+
+        // TODO: create payment intent
+    }
+
+    private fun startCheckout() {
+        enableUi(false)
+        val email = viewBinding.email.text.toString()
+        val name = viewBinding.name.text.toString()
+        // TODO: confirm payment intent
+    }
+
+    private fun createPaymentIntent() {
+        enableUi(false)
+        viewModel.createPaymentIntent("mx")
+            .observe(
+                this,
+                Observer { result ->
+                    result.fold(
+                        onSuccess = {
+                            val secret = it.getString("secret")
+                            // TODO: Use the client secrets
+                        },
+                        onFailure = {
+                            appendStatus("Creating Payment Intent Failed!")
+                            appendStatus(it.message ?: "No error message")
+                        }
+                    )
+                    enableUi(true)
+                }
+            )
+    }
+
+    private fun appendStatus(text: String) {
+        viewModel.status.postValue("${viewModel.status.value}\n\n$text")
     }
 
     private fun enableUi(enabled: Boolean) {
