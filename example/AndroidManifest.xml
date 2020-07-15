@@ -17,7 +17,8 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
         tools:ignore="AllowBackup">
-        <activity android:name=".activity.BottomSheetActivity"></activity>
+        <activity android:name=".activity.TransparentBottomSheetActivity" android:theme="@style/AppTheme.Transparent"></activity>
+        <activity android:name=".activity.BottomSheetActivity" />
 
         <meta-data
             android:name="com.stripe.example.metadata.backend_url"
