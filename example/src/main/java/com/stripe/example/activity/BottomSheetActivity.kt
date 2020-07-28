@@ -53,7 +53,8 @@ class BottomSheetActivity : AppCompatActivity() {
 //                    bottomSheeteBehaviour.setState(BottomSheetBehavior.STATE_EXPANDED)
 //                }
 //            }
-            startActivity(Intent(this, TransparentBottomSheetActivity::class.java))
+            startActivity(Intent(this, TransparentBottomSheetActivity::class.java)
+                .also { it.flags = Intent.FLAG_ACTIVITY_NO_ANIMATION })
         }
         viewBinding.launchFragment.setOnClickListener {
 //            supportFragmentManager.findFragmentByTag("bottom_sheet")?.let {

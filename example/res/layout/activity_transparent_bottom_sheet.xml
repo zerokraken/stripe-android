@@ -15,47 +15,51 @@
         android:background="?colorSurface"
         app:layout_behavior="com.google.android.material.bottomsheet.BottomSheetBehavior">
 
-        <androidx.constraintlayout.widget.ConstraintLayout
-            android:paddingStart="16dp"
-            android:paddingEnd="16dp"
+<!--        <androidx.constraintlayout.widget.ConstraintLayout-->
+<!--            android:paddingStart="16dp"-->
+<!--            android:paddingEnd="16dp"-->
+<!--            android:layout_width="match_parent"-->
+<!--            android:layout_height="wrap_content">-->
+
+<!--            <com.stripe.android.view.CardInputWidget-->
+<!--                android:id="@+id/cardInputWidget"-->
+<!--                android:layout_width="wrap_content"-->
+<!--                android:layout_height="wrap_content"-->
+<!--                android:focusedByDefault="false"-->
+<!--                app:layout_constraintEnd_toEndOf="parent"-->
+<!--                app:layout_constraintStart_toStartOf="parent"-->
+<!--                app:layout_constraintTop_toTopOf="parent" />-->
+
+<!--            <LinearLayout-->
+<!--                android:id="@+id/button_layout"-->
+<!--                android:layout_width="wrap_content"-->
+<!--                android:layout_height="wrap_content"-->
+<!--                android:orientation="vertical"-->
+<!--                app:layout_constraintEnd_toEndOf="parent"-->
+<!--                app:layout_constraintStart_toStartOf="parent"-->
+<!--                app:layout_constraintTop_toBottomOf="@id/cardInputWidget">-->
+
+<!--                <Button-->
+<!--                    android:id="@+id/push"-->
+<!--                    android:layout_width="match_parent"-->
+<!--                    android:layout_height="wrap_content"-->
+<!--                    android:text="Push"-->
+<!--                    android:layout_marginTop="24dp" />-->
+
+<!--                <Button-->
+<!--                    android:id="@+id/modal"-->
+<!--                    android:text="Second modal"-->
+<!--                    android:layout_width="match_parent"-->
+<!--                    android:layout_height="wrap_content"-->
+<!--                    android:layout_marginTop="12dp" />-->
+
+<!--            </LinearLayout>-->
+
+<!--        </androidx.constraintlayout.widget.ConstraintLayout>-->
+        <FrameLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content">
-
-            <com.stripe.android.view.CardInputWidget
-                android:id="@+id/cardInputWidget"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:focusedByDefault="false"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
-
-            <LinearLayout
-                android:id="@+id/button_layout"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:orientation="vertical"
-                app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/cardInputWidget">
-
-                <Button
-                    android:id="@+id/push"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:text="Push"
-                    android:layout_marginTop="24dp" />
-
-                <Button
-                    android:id="@+id/modal"
-                    android:text="Second modal"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="12dp" />
-
-            </LinearLayout>
-
-        </androidx.constraintlayout.widget.ConstraintLayout>
+            android:layout_height="match_parent"
+            android:id="@+id/fragment_container" />
     </ScrollView>
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
