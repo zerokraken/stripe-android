@@ -1,5 +1,6 @@
 package com.stripe.android.model
 
+import android.view.animation.Animation
 import androidx.annotation.DrawableRes
 import com.stripe.android.R
 import com.stripe.android.StripeTextUtils
@@ -135,6 +136,12 @@ enum class CardBrand(
         "Unknown",
         R.drawable.stripe_ic_unknown,
         cvcLength = setOf(3, 4)
+    ),
+
+    Loading(
+        "loading",
+        "Loading",
+        R.drawable.ic_tail_spin
     );
 
     val defaultMaxLengthWithSpaces: Int = defaultMaxLength + defaultSpacePositions.size
@@ -264,14 +271,16 @@ enum class CardBrand(
          * otherwise, [CardBrand.Unknown]
          */
         fun fromCardNumber(cardNumber: String?): CardBrand {
-            if (cardNumber.isNullOrBlank()) {
+            if (cardNumber.isNullOrBlank() || cardNumber.length < 6) {
                 return Unknown
             }
 
-            return values()
-                .firstOrNull { cardBrand ->
-                    cardBrand.getPatternForLength(cardNumber)?.matcher(cardNumber)?.matches() == true
-                } ?: Unknown
+            return Loading
+
+//            return values()
+//                .firstOrNull { cardBrand ->
+//                    cardBrand.getPatternForLength(cardNumber)?.matcher(cardNumber)?.matches() == true
+//                } ?: Unknown
         }
 
         /**

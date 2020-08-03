@@ -154,9 +154,10 @@ class CardNumberEditText @JvmOverloads constructor(
                 }
 
                 val inputText = s?.toString().orEmpty()
-                if (start < 4) {
-                    updateCardBrandFromNumber(inputText)
-                }
+//                if (start < 4) {
+//                    updateCardBrandFromNumber(inputText)
+//                }
+                updateCardBrandFromNumber(inputText)
 
                 if (start > 16) {
                     // no need to do formatting if we're past all of the spaces.

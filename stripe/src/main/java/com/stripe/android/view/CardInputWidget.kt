@@ -751,6 +751,7 @@ class CardInputWidget @JvmOverloads constructor(
 
         @ColorInt var errorColorInt = cardNumberEditText.defaultErrorColorInt
         cardBrandView.tintColorInt = cardNumberEditText.hintTextColors.defaultColor
+
         var cardHintText: String? = null
         val shouldRequestFocus: Boolean
         if (attrs != null) {
