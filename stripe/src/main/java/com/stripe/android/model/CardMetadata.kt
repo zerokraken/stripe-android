@@ -15,5 +15,21 @@ internal data class CardMetadata internal constructor(
         val panLength: Int,
         val brand: String,
         val country: String
-    ) : StripeModel
+    ) : StripeModel {
+
+        fun matches(number: String): Boolean {
+            val withinLowRange = if (number.length < this.accountRangeLow.length) {
+                number.toBigDecimal() >= this.accountRangeLow.substring(0, number.length).toBigDecimal()
+            } else {
+                number.substring(0, this.accountRangeLow.length).toBigDecimal() >= this.accountRangeLow.toBigDecimal()
+            }
+
+            val withinHighRange = if (number.length < this.accountRangeHigh.length) {
+                number.toBigDecimal() <= this.accountRangeHigh.substring(0, number.length).toBigDecimal()
+            } else {
+                number.substring(0, this.accountRangeHigh.length).toBigDecimal() <= this.accountRangeHigh.toBigDecimal()
+            }
+            return withinLowRange && withinHighRange
+        }
+    }
 }
