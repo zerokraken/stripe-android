@@ -9,12 +9,6 @@ import android.view.animation.RotateAnimation
 import android.widget.FrameLayout
 import androidx.annotation.ColorInt
 import androidx.core.graphics.drawable.DrawableCompat
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleOwner
-import androidx.lifecycle.LifecycleRegistry
-import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.Observer
-import com.stripe.android.R
 import com.stripe.android.databinding.CardBrandViewBinding
 import com.stripe.android.model.CardBrand
 

@@ -1,5 +1,7 @@
 package com.stripe.android.view
 
+import android.app.Activity
+import android.app.Application
 import android.content.Context
 import android.os.Build
 import android.text.Editable
@@ -7,10 +9,36 @@ import android.text.InputFilter
 import android.util.AttributeSet
 import android.view.View
 import androidx.annotation.VisibleForTesting
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelStoreOwner
+import com.stripe.android.ApiRequest
 import com.stripe.android.CardUtils
+import com.stripe.android.PaymentConfiguration
 import com.stripe.android.R
+import com.stripe.android.StripeApiRepository
 import com.stripe.android.StripeTextUtils
 import com.stripe.android.model.CardBrand
+import com.stripe.android.model.CardMetadata
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+
+internal class CardNumberViewModel @JvmOverloads internal constructor(
+    application: Application,
+    workDispatcher: CoroutineDispatcher = Dispatchers.IO
+) : AndroidViewModel(application) {
+    private val publishableKey = PaymentConfiguration.getInstance(application).publishableKey
+    private val stripeRepository = StripeApiRepository(
+        application,
+        publishableKey,
+        workDispatcher = workDispatcher
+    )
+
+    private val responseHistory = mutableMapOf<String, CardMetadata>()
+}
 
 /**
  * A [StripeEditText] that handles spacing out the digits of a credit card.
@@ -20,6 +48,22 @@ class CardNumberEditText @JvmOverloads constructor(
     attrs: AttributeSet? = null,
     defStyleAttr: Int = androidx.appcompat.R.attr.editTextStyle
 ) : StripeEditText(context, attrs, defStyleAttr) {
+
+    private val publishableKey = PaymentConfiguration.getInstance(context).publishableKey
+    private val stripeRepository = StripeApiRepository(
+        context,
+        publishableKey,
+        workDispatcher = Dispatchers.IO
+    )
+
+    private val responseHistory = mutableMapOf<String, CardMetadata>()
+
+    private val viewModel by lazy {
+        ViewModelProvider(
+            context as ViewModelStoreOwner,
+            ViewModelProvider.AndroidViewModelFactory((context as Activity).application)
+        ).get(CardNumberViewModel::class.java)
+    }
 
     @VisibleForTesting
     var cardBrand: CardBrand = CardBrand.Unknown
@@ -206,8 +250,53 @@ class CardNumberEditText @JvmOverloads constructor(
         })
     }
 
+    val workScope = CoroutineScope(Dispatchers.IO)
+
     @JvmSynthetic
     internal fun updateCardBrandFromNumber(partialNumber: String) {
-        cardBrand = CardUtils.getPossibleCardBrand(partialNumber)
+        val cardNumber = StripeTextUtils.removeSpacesAndHyphens(partialNumber)
+        if (cardNumber.isNullOrBlank() || cardNumber.length < 6) {
+            cardBrand = CardBrand.Unknown
+            return
+        }
+        val prefix = cardNumber.substring(0, 6)
+        val previousMatch = responseHistory[prefix]
+        if (previousMatch != null) {
+            val matchingBrands = previousMatch.accountRanges.filter {
+                it.matches(cardNumber)
+            }
+                .map { it.brand }
+                .toSet()
+            cardBrand = if (matchingBrands.size == 1) {
+                CardBrand.fromCode(matchingBrands.first())
+            } else {
+                CardBrand.Unknown
+            }
+        } else {
+            cardBrand = CardBrand.Loading
+
+            workScope.launch {
+                runCatching {
+                    stripeRepository.getCardMetadata(
+                        prefix,
+                        ApiRequest.Options(publishableKey)
+                    )
+                }.onSuccess { cardMetadata ->
+                    withContext(Dispatchers.Main) {
+                        responseHistory[prefix] = cardMetadata
+                        val matchingBrands = cardMetadata.accountRanges.filter {
+                            it.matches(cardNumber)
+                        }
+                            .map { it.brand }
+                            .toSet()
+                        cardBrand = if (matchingBrands.size == 1) {
+                            CardBrand.fromCode(matchingBrands.first())
+                        } else {
+                            CardBrand.Unknown
+                        }
+                    }
+                }
+            }
+        }
     }
 }

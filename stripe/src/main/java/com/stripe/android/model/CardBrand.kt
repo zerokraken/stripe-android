@@ -1,6 +1,5 @@
 package com.stripe.android.model
 
-import android.view.animation.Animation
 import androidx.annotation.DrawableRes
 import com.stripe.android.R
 import com.stripe.android.StripeTextUtils
