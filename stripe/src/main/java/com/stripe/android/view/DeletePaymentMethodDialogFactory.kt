@@ -7,7 +7,7 @@ import com.stripe.android.R
 import com.stripe.android.StripeError
 import com.stripe.android.model.PaymentMethod
 
-internal class DeletePaymentMethodDialogFactory internal constructor(
+class DeletePaymentMethodDialogFactory(
     private val context: Context,
     private val adapter: PaymentMethodsAdapter,
     private val cardDisplayTextFactory: CardDisplayTextFactory,

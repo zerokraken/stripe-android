@@ -8,14 +8,14 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.stripe.android.model.PaymentMethod
 
-internal class PaymentMethodsRecyclerView @JvmOverloads internal constructor(
+class PaymentMethodsRecyclerView @JvmOverloads internal constructor(
     context: Context,
     attrs: AttributeSet? = null,
     defStyleAttr: Int = 0
 ) : RecyclerView(context, attrs, defStyleAttr) {
 
     internal var paymentMethodSelectedCallback: (PaymentMethod) -> Unit = {}
-    internal var tappedPaymentMethod: PaymentMethod? = null
+    var tappedPaymentMethod: PaymentMethod? = null
 
     init {
         setHasFixedSize(false)

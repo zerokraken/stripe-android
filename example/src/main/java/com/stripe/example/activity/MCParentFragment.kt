@@ -34,7 +34,7 @@ class MCParentFragment : Fragment(R.layout.mc_parent_fragment) {
             when(it) {
                 Transition.PUSH -> {
                     childFragmentManager.beginTransaction()
-                        .setCustomAnimations(R.transition.enter_from_right, R.transition.exit_to_left, R.transition.enter_from_left, R.transition.exit_to_right)
+                        .setCustomAnimations(R.anim.enter_from_right, R.anim.exit_to_left, R.anim.enter_from_left, R.anim.exit_to_right)
                         .replace(R.id.fragment_container, MCPushFragment())
                         .addToBackStack(null)
                         .commit()

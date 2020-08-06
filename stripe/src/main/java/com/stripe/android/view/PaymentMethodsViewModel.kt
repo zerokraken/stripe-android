@@ -14,7 +14,7 @@ import com.stripe.android.StripeError
 import com.stripe.android.exception.APIException
 import com.stripe.android.model.PaymentMethod
 
-internal class PaymentMethodsViewModel(
+class PaymentMethodsViewModel(
     application: Application,
     private val customerSession: CustomerSession,
     internal var selectedPaymentMethodId: String? = null,
@@ -23,22 +23,22 @@ internal class PaymentMethodsViewModel(
     private val resources = application.resources
     private val cardDisplayTextFactory = CardDisplayTextFactory(application)
 
-    internal val productUsage: Set<String> = listOfNotNull(
+    val productUsage: Set<String> = listOfNotNull(
         PaymentSession.PRODUCT_TOKEN.takeIf { startedFromPaymentSession },
         PaymentMethodsActivity.PRODUCT_TOKEN
     ).toSet()
 
     internal val snackbarData: MutableLiveData<String?> = MutableLiveData()
-    internal val progressData: MutableLiveData<Boolean> = MutableLiveData()
+    val progressData: MutableLiveData<Boolean> = MutableLiveData()
 
-    internal fun onPaymentMethodAdded(paymentMethod: PaymentMethod) {
+    fun onPaymentMethodAdded(paymentMethod: PaymentMethod) {
         createSnackbarText(paymentMethod, R.string.added)?.let {
             snackbarData.value = it
             snackbarData.value = null
         }
     }
 
-    internal fun onPaymentMethodRemoved(paymentMethod: PaymentMethod) {
+    fun onPaymentMethodRemoved(paymentMethod: PaymentMethod) {
         createSnackbarText(paymentMethod, R.string.removed)?.let {
             snackbarData.value = it
             snackbarData.value = null
@@ -58,7 +58,7 @@ internal class PaymentMethodsViewModel(
     }
 
     @JvmSynthetic
-    internal fun getPaymentMethods(): LiveData<Result<List<PaymentMethod>>> {
+    fun getPaymentMethods(): LiveData<Result<List<PaymentMethod>>> {
         val resultData = MutableLiveData<Result<List<PaymentMethod>>>()
         progressData.value = true
         customerSession.getPaymentMethods(
@@ -90,7 +90,7 @@ internal class PaymentMethodsViewModel(
         return resultData
     }
 
-    internal class Factory(
+    class Factory(
         private val application: Application,
         private val customerSession: CustomerSession,
         private val initialPaymentMethodId: String?,

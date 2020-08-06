@@ -8,15 +8,15 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <com.stripe.android.view.CardInputWidget
-        android:id="@+id/cardInputWidget"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+<!--    <com.stripe.android.view.CardInputWidget-->
+<!--        android:id="@+id/cardInputWidget"-->
+<!--        android:layout_width="wrap_content"-->
+<!--        android:layout_height="wrap_content"-->
 
-        android:focusedByDefault="false"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+<!--        android:focusedByDefault="false"-->
+<!--        app:layout_constraintEnd_toEndOf="parent"-->
+<!--        app:layout_constraintStart_toStartOf="parent"-->
+<!--        app:layout_constraintTop_toTopOf="parent" />-->
 
     <LinearLayout
         android:id="@+id/button_layout"
@@ -25,13 +25,27 @@
         android:orientation="vertical"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/cardInputWidget">
+        app:layout_constraintTop_toTopOf="parent">
+
+        <ProgressBar
+            android:id="@+id/progress_bar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            style="@style/Widget.AppCompat.ProgressBar.Horizontal"
+            android:indeterminate="true"
+            android:visibility="gone" />
 
         <TextView
             android:textSize="32sp"
             android:layout_width="wrap_content"
             android:text="This is another fragment!"
             android:layout_height="wrap_content"/>
+
+        <com.stripe.android.view.PaymentMethodsRecyclerView
+            android:id="@+id/recycler"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/stripe_list_top_margin" />
 
 
     </LinearLayout>

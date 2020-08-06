@@ -22,7 +22,7 @@ import kotlinx.coroutines.launch
  * A [RecyclerView.Adapter] that holds a set of [MaskedCardView] items for a given set
  * of [PaymentMethod] objects.
  */
-internal class PaymentMethodsAdapter constructor(
+class PaymentMethodsAdapter constructor(
     private val intentArgs: PaymentMethodsActivityStarter.Args,
     private val addableTypes: List<PaymentMethod.Type> = listOf(PaymentMethod.Type.Card),
     initiallySelectedPaymentMethodId: String? = null,
@@ -41,7 +41,7 @@ internal class PaymentMethodsAdapter constructor(
             }
         }
 
-    internal var listener: Listener? = null
+    var listener: Listener? = null
     private val googlePayCount = 1.takeIf { shouldShowGooglePay } ?: 0
 
     init {
@@ -49,7 +49,7 @@ internal class PaymentMethodsAdapter constructor(
     }
 
     @JvmSynthetic
-    internal fun setPaymentMethods(paymentMethods: List<PaymentMethod>) {
+    fun setPaymentMethods(paymentMethods: List<PaymentMethod>) {
         this.paymentMethods.clear()
         this.paymentMethods.addAll(paymentMethods)
         notifyDataSetChanged()
@@ -312,7 +312,7 @@ internal class PaymentMethodsAdapter constructor(
         }
     }
 
-    internal interface Listener {
+    interface Listener {
         fun onPaymentMethodClick(paymentMethod: PaymentMethod)
         fun onGooglePayClick()
         fun onDeletePaymentMethodAction(paymentMethod: PaymentMethod)

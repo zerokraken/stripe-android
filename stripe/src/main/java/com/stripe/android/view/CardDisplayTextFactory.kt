@@ -12,11 +12,11 @@ import com.stripe.android.R
 import com.stripe.android.model.CardBrand
 import com.stripe.android.model.PaymentMethod
 
-internal class CardDisplayTextFactory internal constructor(
+class CardDisplayTextFactory internal constructor(
     private val resources: Resources,
     private val themeConfig: ThemeConfig
 ) {
-    internal constructor(context: Context) : this(context.resources, ThemeConfig(context))
+    constructor(context: Context) : this(context.resources, ThemeConfig(context))
 
     @JvmSynthetic
     internal fun createStyled(
