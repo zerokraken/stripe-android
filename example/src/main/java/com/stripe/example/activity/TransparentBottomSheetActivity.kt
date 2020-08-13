@@ -12,6 +12,7 @@ import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_HIDDEN
 import com.stripe.android.CustomerSession
@@ -36,7 +37,6 @@ class TransparentBottomSheetActivity : AppCompatActivity() {
     val viewBinding by lazy {
         ActivityTransparentBottomSheetBinding.inflate(layoutInflater)
     }
-    private val workScope: CoroutineScope = CoroutineScope(Dispatchers.Main)
 
     val viewModel: AMCViewModel by viewModels()
     lateinit var bottomSheetBehavior: BottomSheetBehavior<View>
@@ -61,21 +61,18 @@ class TransparentBottomSheetActivity : AppCompatActivity() {
             .replace(viewBinding.fragmentContainer.id, AMCRootFragment())
             .commitAllowingStateLoss()
 
-        workScope.launch {
-            delay(300)
-            withContext(Dispatchers.Main) {
-                bottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
-                bottomSheetBehavior.addBottomSheetCallback(object : BottomSheetBehavior.BottomSheetCallback() {
-                    override fun onSlide(bottomSheet: View, slideOffset: Float) {
-                    }
+        withDelay(300) {
+            bottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
+            bottomSheetBehavior.addBottomSheetCallback(object : BottomSheetBehavior.BottomSheetCallback() {
+                override fun onSlide(bottomSheet: View, slideOffset: Float) {
+                }
 
-                    override fun onStateChanged(bottomSheet: View, newState: Int) {
-                        if (newState == STATE_HIDDEN) {
-                            finish()
-                        }
+                override fun onStateChanged(bottomSheet: View, newState: Int) {
+                    if (newState == STATE_HIDDEN) {
+                        finish()
                     }
-                })
-            }
+                }
+            })
         }
         viewModel.transition.observe(this, Observer {
             when(it) {
@@ -88,6 +85,15 @@ class TransparentBottomSheetActivity : AppCompatActivity() {
                 }
             }
         })
+    }
+
+    fun withDelay(delayMillis: Long, fn: () -> Unit) {
+        lifecycleScope.launch {
+            delay(delayMillis)
+            withContext(Dispatchers.Main) {
+                fn()
+            }
+        }
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
