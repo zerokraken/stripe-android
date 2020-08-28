@@ -4,11 +4,12 @@ import android.app.Application
 import android.os.Bundle
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.liveData
+import com.stripe.android.view.CheckoutActivity
 import com.stripe.example.databinding.ActivityLaunchMcBinding
+import com.stripe.example.module.StripeIntentViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -45,7 +46,20 @@ class LaunchMCActivity : AppCompatActivity() {
             }
         )
         viewBinding.launchMc.setOnClickListener {
-            // TODO: use ephemeral key
+            viewModel.createPaymentIntent("us").observe(
+                this,
+                Observer {
+                    it.fold(
+                        onSuccess = {
+                            val secret = it.getString("secret")
+                            CheckoutActivity.start(this, secret, ephemeralKey.key, ephemeralKey.customer)
+                        },
+                        onFailure = {
+                            viewModel.status.postValue(viewModel.status.value + "\nFailed: ${it.message}")
+                        }
+                    )
+                }
+            )
         }
         viewModel.fetchEphemeralKey().observe(
             this,
@@ -57,9 +71,7 @@ class LaunchMCActivity : AppCompatActivity() {
 
     internal data class EphemeralKey(val key: String, val customer: String)
 
-    internal class ViewModel(application: Application) : BaseViewModel(application) {
-        val inProgress = MutableLiveData<Boolean>()
-        val status = MutableLiveData<String>()
+    internal class ViewModel(application: Application) : StripeIntentViewModel(application) {
 
         fun fetchEphemeralKey() = liveData {
             inProgress.postValue(true)
