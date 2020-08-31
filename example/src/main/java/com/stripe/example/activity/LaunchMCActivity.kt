@@ -1,6 +1,8 @@
 package com.stripe.example.activity
 
+import android.app.Activity
 import android.app.Application
+import android.content.Context
 import android.os.Bundle
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
@@ -10,7 +12,9 @@ import androidx.lifecycle.liveData
 import com.stripe.android.view.CheckoutActivity
 import com.stripe.example.databinding.ActivityLaunchMcBinding
 import com.stripe.example.module.StripeIntentViewModel
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 
@@ -45,23 +49,28 @@ class LaunchMCActivity : AppCompatActivity() {
                 viewBinding.status.text = it
             }
         )
-        viewBinding.launchMc.setOnClickListener {
-            viewModel.createPaymentIntent("us").observe(
-                this,
-                Observer {
-                    it.fold(
-                        onSuccess = {
-                            val secret = it.getString("secret")
-                            CheckoutActivity.start(this, secret, ephemeralKey.key, ephemeralKey.customer)
-                        },
-                        onFailure = {
-                            viewModel.status.postValue(viewModel.status.value + "\nFailed: ${it.message}")
-                        }
-                    )
-                }
-            )
+        viewBinding.clear.setOnClickListener {
+            viewModel.clearKeys(this)
         }
-        viewModel.fetchEphemeralKey().observe(
+        viewBinding.launchMc.setOnClickListener {
+            // Disabled because we don't need it right now
+//            viewModel.createPaymentIntent("us").observe(
+//                this,
+//                Observer {
+//                    it.fold(
+//                        onSuccess = {
+//                            val secret = it.getString("secret")
+//                            CheckoutActivity.start(this, secret, ephemeralKey.key, ephemeralKey.customer)
+//                        },
+//                        onFailure = {
+//                            viewModel.status.postValue(viewModel.status.value + "\nFailed: ${it.message}")
+//                        }
+//                    )
+//                }
+//            )
+            CheckoutActivity.start(this, "", ephemeralKey.key, ephemeralKey.customer)
+        }
+        viewModel.fetchEphemeralKey(this).observe(
             this,
             Observer {
                 ephemeralKey = it
@@ -73,7 +82,24 @@ class LaunchMCActivity : AppCompatActivity() {
 
     internal class ViewModel(application: Application) : StripeIntentViewModel(application) {
 
-        fun fetchEphemeralKey() = liveData {
+        fun clearKeys(activity: Activity) {
+            val prefs = activity.getPreferences(Context.MODE_PRIVATE)
+            CoroutineScope(workContext).launch {
+                prefs.edit()
+                    .clear()
+                    .commit()
+            }
+        }
+
+        fun fetchEphemeralKey(activity: Activity) = liveData {
+            val prefs = activity.getPreferences(Context.MODE_PRIVATE)
+            val ek = prefs.getString(PREF_EK, null)
+            val customer = prefs.getString(PREF_CUSTOMER, null)
+            if (ek != null && customer != null) {
+                emit(EphemeralKey(ek, customer))
+                return@liveData
+            }
+
             inProgress.postValue(true)
             status.postValue("Fetching ephemeral key")
             val responseJson =
@@ -93,6 +119,11 @@ class LaunchMCActivity : AppCompatActivity() {
 
                     status.postValue(status.value + "\n\nFetched key $secret for customer $objectId")
 
+                    prefs.edit()
+                        .putString(PREF_EK, secret)
+                        .putString(PREF_CUSTOMER, objectId)
+                        .commit()
+
                     withContext(Dispatchers.Main) {
                         emit(EphemeralKey(secret, objectId))
                     }
@@ -102,6 +133,12 @@ class LaunchMCActivity : AppCompatActivity() {
                 }
             )
             inProgress.postValue(false)
+        }
+
+        private companion object {
+            private const val PREF_EK = "pref_ek"
+            private const val PREF_PI = "pref_pi"
+            private const val PREF_CUSTOMER = "pref_customer"
         }
     }
 }

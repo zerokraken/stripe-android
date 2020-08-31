@@ -17,13 +17,28 @@
             android:indeterminate="true"
             android:visibility="invisible" />
 
-        <Button
-            android:id="@+id/launch_mc"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+        <LinearLayout
             android:layout_gravity="center_horizontal"
-            android:enabled="true"
-            android:text="Launch MC" />
+            android:layout_width="wrap_content"
+            android:orientation="vertical"
+            android:layout_height="wrap_content">
+
+            <Button
+                android:id="@+id/launch_mc"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:enabled="true"
+                android:text="Launch MC" />
+
+            <Button
+                android:id="@+id/clear"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Clear Secrets"/>
+
+        </LinearLayout>
+
+
 
         <TextView
             android:id="@+id/status"

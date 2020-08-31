@@ -178,4 +178,6 @@
     by the Merchant. You certify that you are either an account holder or an authorised
     signatory on the account listed above.
     </string>
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
 </resources>

@@ -5,7 +5,7 @@
     android:versionName="15.1.0">
 
     <application>
-        <activity android:name=".view.CheckoutActivity"></activity>
+        <activity android:name=".view.CheckoutActivity" android:theme="@style/Transparent" />
         <activity
             android:name=".view.AddPaymentMethodActivity"
             android:theme="@style/StripeDefaultTheme" />
