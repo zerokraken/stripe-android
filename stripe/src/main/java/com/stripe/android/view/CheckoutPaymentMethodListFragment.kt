@@ -41,12 +41,33 @@ class CheckoutPaymentMethodListFragment : Fragment(R.layout.fragment_checkout_pa
         }
     }
 
-    private class Adapter(val methods: List<PaymentMethod>) : RecyclerView.Adapter<Adapter.VH>() {
+    private class Adapter(val paymentMethods: List<PaymentMethod>) : RecyclerView.Adapter<Adapter.VH>() {
+
+        private var selectedPaymentMethodId: String? = null
+
+        private fun updateSelectedPaymentMethod(position: Int) {
+            val currentlySelectedPosition = paymentMethods.indexOfFirst {
+                it.id == selectedPaymentMethodId
+            }
+            if (currentlySelectedPosition != position) {
+                // selected a new Payment Method
+                notifyItemChanged(currentlySelectedPosition)
+                selectedPaymentMethodId = paymentMethods.getOrNull(position)?.id
+            }
+
+            // Notify the current position even if it's the currently selected position so that the
+            // ItemAnimator defined in PaymentMethodActivity is triggered.
+            notifyItemChanged(position)
+        }
 
         private data class VH(val binding: LayoutCheckoutPaymentMethodItemBinding) : RecyclerView.ViewHolder(binding.root) {
             fun bindMethod(method: PaymentMethod) {
                 binding.brandIcon.setImageResource(method.card!!.brand.icon)
                 binding.cardNumber.setText("····" + method.card!!.last4)
+            }
+
+            fun setSelected(selected: Boolean) {
+                binding.checkIcon.visibility = if (selected) View.VISIBLE else View.GONE
             }
         }
 
@@ -56,12 +77,16 @@ class CheckoutPaymentMethodListFragment : Fragment(R.layout.fragment_checkout_pa
         }
 
         override fun getItemCount(): Int {
-            return methods.size
+            return paymentMethods.size
         }
 
         override fun onBindViewHolder(holder: VH, position: Int) {
-            val method = methods[position]
+            val method = paymentMethods[position]
             holder.bindMethod(method)
+            holder.setSelected(method.id == selectedPaymentMethodId)
+            holder.binding.root.setOnClickListener {
+                updateSelectedPaymentMethod(holder.adapterPosition)
+            }
         }
     }
 }
