@@ -9,8 +9,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.liveData
-import com.stripe.android.Stripe
-import com.stripe.example.StripeFactory
+import com.stripe.android.Checkout
 import com.stripe.example.databinding.ActivityLaunchMcBinding
 import com.stripe.example.module.StripeIntentViewModel
 import kotlinx.coroutines.CoroutineScope
@@ -29,11 +28,6 @@ class LaunchMCActivity : AppCompatActivity() {
             this,
             ViewModelProvider.AndroidViewModelFactory(application)
         )[ViewModel::class.java]
-    }
-
-    private val stripe: Stripe by lazy {
-        // TODO: handle different accounts
-        StripeFactory(this).create()
     }
 
     private lateinit var ephemeralKey: EphemeralKey
@@ -56,6 +50,7 @@ class LaunchMCActivity : AppCompatActivity() {
                 viewBinding.status.text = it
             }
         )
+
         viewBinding.clear.setOnClickListener {
             viewModel.clearKeys(this)
             fetchEphemeralKey()
@@ -76,7 +71,10 @@ class LaunchMCActivity : AppCompatActivity() {
 //                    )
 //                }
 //            )
-            stripe.launchCheckout(this, "", ephemeralKey.key, ephemeralKey.customer)
+            val checkout = Checkout("", ephemeralKey.key, ephemeralKey.customer)
+            checkout.confirm(this) {
+                // TODO: Use result
+            }
         }
         fetchEphemeralKey()
     }
@@ -103,7 +101,7 @@ class LaunchMCActivity : AppCompatActivity() {
             }
         }
 
-        fun fetchEphemeralKey(activity: Activity) = liveData {
+        fun fetchEphemeralKey(activity: Activity) = liveData(workContext) {
             val prefs = activity.getPreferences(Context.MODE_PRIVATE)
             val ek = prefs.getString(PREF_EK, null)
             val customer = prefs.getString(PREF_CUSTOMER, null)

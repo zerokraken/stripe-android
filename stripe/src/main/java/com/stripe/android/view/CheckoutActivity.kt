@@ -39,20 +39,38 @@ internal class CheckoutActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(viewBinding.root)
 
+        // Handle taps outside of bottom sheet
         viewBinding.root.setOnClickListener {
             animateOut()
         }
 
-        val bottomSheet: View = viewBinding.bottomSheet
-        bottomSheetBehavior = BottomSheetBehavior.from(bottomSheet)
-        bottomSheetBehavior.peekHeight = BottomSheetBehavior.PEEK_HEIGHT_AUTO
-        bottomSheetBehavior.isHideable = true
-        bottomSheetBehavior.state = STATE_HIDDEN
+        setupBottomSheet()
 
         supportFragmentManager
             .beginTransaction()
             .replace(viewBinding.fragmentContainer.id, CheckoutPaymentMethodListFragment())
             .commitAllowingStateLoss()
+
+//        viewModel.transition.observe(this, Observer {
+//            when(it) {
+//                Transition.PUSH -> {
+//                    supportFragmentManager.beginTransaction()
+//                        .setCustomAnimations(R.anim.enter_from_right, R.anim.exit_to_left, R.anim.enter_from_left, R.anim.exit_to_right)
+//                        .replace(R.id.fragment_container, AMCPushFragment())
+//                        .addToBackStack(null)
+//                        .commit()
+//                }
+//            }
+//        })
+    }
+
+    private fun setupBottomSheet() {
+        val bottomSheet: View = viewBinding.bottomSheet
+        bottomSheetBehavior = BottomSheetBehavior.from(bottomSheet)
+        bottomSheetBehavior.peekHeight = BottomSheetBehavior.PEEK_HEIGHT_AUTO
+        bottomSheetBehavior.isHideable = true
+        // Start hidden and then animate in after delay
+        bottomSheetBehavior.state = STATE_HIDDEN
 
         withDelay(300) {
             bottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
@@ -67,17 +85,6 @@ internal class CheckoutActivity : AppCompatActivity() {
                 }
             })
         }
-//        viewModel.transition.observe(this, Observer {
-//            when(it) {
-//                Transition.PUSH -> {
-//                    supportFragmentManager.beginTransaction()
-//                        .setCustomAnimations(R.anim.enter_from_right, R.anim.exit_to_left, R.anim.enter_from_left, R.anim.exit_to_right)
-//                        .replace(R.id.fragment_container, AMCPushFragment())
-//                        .addToBackStack(null)
-//                        .commit()
-//                }
-//            }
-//        })
     }
 
     private fun withDelay(delayMillis: Long, fn: () -> Unit) {
@@ -157,9 +164,5 @@ internal class CheckoutActivity : AppCompatActivity() {
             // TODO: use a real result
             return null
         }
-    }
-
-    companion object {
-        internal const val EXTRA_ARGS = "checkout_activity_args"
     }
 }

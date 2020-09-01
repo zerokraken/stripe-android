@@ -3,7 +3,6 @@ package com.stripe.android
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
-import androidx.activity.ComponentActivity
 import androidx.annotation.Size
 import androidx.annotation.UiThread
 import androidx.annotation.WorkerThread
@@ -36,7 +35,6 @@ import com.stripe.android.model.StripeIntent
 import com.stripe.android.model.Token
 import com.stripe.android.model.TokenParams
 import com.stripe.android.view.AuthActivityStarter
-import com.stripe.android.view.CheckoutActivity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 
@@ -60,13 +58,6 @@ class Stripe internal constructor(
     private val workScope: CoroutineScope = CoroutineScope(Dispatchers.IO)
 ) {
     private val publishableKey: String = ApiKeyValidator().requireValid(publishableKey)
-
-    fun launchCheckout(activity: ComponentActivity, clientSecret: String, ephemeralKey: String, customerId: String) {
-        val launcher = activity.registerForActivityResult(CheckoutActivity.Contract()) {
-            // TODO: Handle result
-        }
-        launcher.launch(CheckoutActivity.Args(clientSecret, ephemeralKey, customerId))
-    }
 
     /**
      * Constructor with publishable key and Stripe Connect account id.
