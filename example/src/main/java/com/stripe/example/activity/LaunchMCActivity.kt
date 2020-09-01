@@ -9,7 +9,8 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.liveData
-import com.stripe.android.view.CheckoutActivity
+import com.stripe.android.Stripe
+import com.stripe.example.StripeFactory
 import com.stripe.example.databinding.ActivityLaunchMcBinding
 import com.stripe.example.module.StripeIntentViewModel
 import kotlinx.coroutines.CoroutineScope
@@ -30,6 +31,11 @@ class LaunchMCActivity : AppCompatActivity() {
         )[ViewModel::class.java]
     }
 
+    private val stripe: Stripe by lazy {
+        // TODO: handle different accounts
+        StripeFactory(this).create()
+    }
+
     private lateinit var ephemeralKey: EphemeralKey
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -41,6 +47,7 @@ class LaunchMCActivity : AppCompatActivity() {
             Observer {
                 viewBinding.progressBar.visibility = if (it) View.VISIBLE else View.INVISIBLE
                 viewBinding.launchMc.isEnabled = !it
+                viewBinding.clear.isEnabled = !it
             }
         )
         viewModel.status.observe(
@@ -51,6 +58,7 @@ class LaunchMCActivity : AppCompatActivity() {
         )
         viewBinding.clear.setOnClickListener {
             viewModel.clearKeys(this)
+            fetchEphemeralKey()
         }
         viewBinding.launchMc.setOnClickListener {
             // Disabled because we don't need it right now
@@ -68,8 +76,12 @@ class LaunchMCActivity : AppCompatActivity() {
 //                    )
 //                }
 //            )
-            CheckoutActivity.start(this, "", ephemeralKey.key, ephemeralKey.customer)
+            stripe.launchCheckout(this, "", ephemeralKey.key, ephemeralKey.customer)
         }
+        fetchEphemeralKey()
+    }
+
+    private fun fetchEphemeralKey() {
         viewModel.fetchEphemeralKey(this).observe(
             this,
             Observer {
@@ -87,7 +99,7 @@ class LaunchMCActivity : AppCompatActivity() {
             CoroutineScope(workContext).launch {
                 prefs.edit()
                     .clear()
-                    .commit()
+                    .apply()
             }
         }
 
@@ -122,7 +134,7 @@ class LaunchMCActivity : AppCompatActivity() {
                     prefs.edit()
                         .putString(PREF_EK, secret)
                         .putString(PREF_CUSTOMER, objectId)
-                        .commit()
+                        .apply()
 
                     withContext(Dispatchers.Main) {
                         emit(EphemeralKey(secret, objectId))
@@ -137,7 +149,6 @@ class LaunchMCActivity : AppCompatActivity() {
 
         private companion object {
             private const val PREF_EK = "pref_ek"
-            private const val PREF_PI = "pref_pi"
             private const val PREF_CUSTOMER = "pref_customer"
         }
     }

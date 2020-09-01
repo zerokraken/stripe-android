@@ -1,12 +1,12 @@
 package com.stripe.android.view
 
-import android.app.Activity
 import android.app.Application
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.os.Parcelable
 import android.view.View
-import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContract
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
@@ -27,7 +27,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class CheckoutActivity : AppCompatActivity() {
+internal class CheckoutActivity : AppCompatActivity() {
     private val viewBinding by lazy {
         ActivityCheckoutBinding.inflate(layoutInflater)
     }
@@ -37,11 +37,6 @@ class CheckoutActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(viewBinding.root)
-
-        val args: Args? = intent.getParcelableExtra(EXTRA_ARGS)
-        if (args != null) {
-            Toast.makeText(this, "Found some args", Toast.LENGTH_LONG).show()
-        }
 
         viewBinding.root.setOnClickListener {
             animateOut()
@@ -138,13 +133,18 @@ class CheckoutActivity : AppCompatActivity() {
         }
     }
 
+    internal class Contract : ActivityResultContract<Args, String?>() {
+        override fun createIntent(context: Context, input: Args): Intent {
+            return Intent(context, CheckoutActivity::class.java)
+                .putExtra(EXTRA_ARGS, input)
+        }
+
+        override fun parseResult(resultCode: Int, intent: Intent?): String? {
+            return null
+        }
+    }
+
     companion object {
         internal const val EXTRA_ARGS = "checkout_activity_args"
-
-        fun start(activity: Activity, clientSecret: String, ephemeralKey: String, customer: String) {
-            activity.startActivity(Intent(activity, CheckoutActivity::class.java)
-                .putExtra(EXTRA_ARGS, Args(clientSecret, ephemeralKey, customer))
-                .setFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION))
-        }
     }
 }
