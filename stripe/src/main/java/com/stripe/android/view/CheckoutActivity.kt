@@ -21,6 +21,7 @@ import com.stripe.android.StripeApiRepository
 import com.stripe.android.databinding.ActivityCheckoutBinding
 import com.stripe.android.model.ListPaymentMethodsParams
 import com.stripe.android.model.PaymentMethod
+import com.stripe.android.view.CheckoutActivity.Args.Companion.putCheckoutArgs
 import kotlinx.android.parcel.Parcelize
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -89,6 +90,8 @@ internal class CheckoutActivity : AppCompatActivity() {
     }
 
     private fun animateOut() {
+        // When the bottom sheet finishes animating to its new state,
+        // the callback will finish the activity
         bottomSheetBehavior.state = STATE_HIDDEN
     }
 
@@ -99,19 +102,6 @@ internal class CheckoutActivity : AppCompatActivity() {
             animateOut()
         }
     }
-
-    override fun finish() {
-        super.finish()
-        // TOOD set result
-        overridePendingTransition(0, 0)
-    }
-
-    @Parcelize
-    internal data class Args(
-        val clientSecret: String,
-        val ephemeralKey: String,
-        val customer: String
-    ) : Parcelable
 
     internal class ViewModel(application: Application) : AndroidViewModel(application) {
         val config = PaymentConfiguration.getInstance(application)
@@ -133,13 +123,38 @@ internal class CheckoutActivity : AppCompatActivity() {
         }
     }
 
+    override fun finish() {
+        super.finish()
+        // TOOD set result
+        overridePendingTransition(0, 0)
+    }
+
+    @Parcelize
+    internal data class Args(
+        val clientSecret: String,
+        val ephemeralKey: String,
+        val customer: String
+    ) : Parcelable {
+
+        internal companion object {
+            private const val EXTRA_ARGS = "checkout_activity_args"
+
+            fun fromIntent(intent: Intent): Args? {
+                return intent.getParcelableExtra(EXTRA_ARGS)
+            }
+
+            fun Intent.putCheckoutArgs(args: Args): Intent = this.putExtra(EXTRA_ARGS, args)
+        }
+    }
+
     internal class Contract : ActivityResultContract<Args, String?>() {
         override fun createIntent(context: Context, input: Args): Intent {
             return Intent(context, CheckoutActivity::class.java)
-                .putExtra(EXTRA_ARGS, input)
+                .putCheckoutArgs(input)
         }
 
         override fun parseResult(resultCode: Int, intent: Intent?): String? {
+            // TODO: use a real result
             return null
         }
     }

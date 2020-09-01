@@ -19,13 +19,14 @@ class CheckoutPaymentMethodListFragment : Fragment(R.layout.fragment_checkout_pa
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
         val binding = FragmentCheckoutPaymentMethodListBinding.bind(view)
         binding.recycler.layoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
-        val viewModel by activityViewModels<CheckoutActivity.ViewModel>()
-        val intent = requireActivity().intent
-        val args: CheckoutActivity.Args? = intent.getParcelableExtra(CheckoutActivity.EXTRA_ARGS)
+
+        val args: CheckoutActivity.Args? = CheckoutActivity.Args.fromIntent(requireActivity().intent)
 
         if (args != null) {
+            val viewModel by activityViewModels<CheckoutActivity.ViewModel>()
             viewModel.getPaymentMethods(args.customer, args.ephemeralKey).observe(viewLifecycleOwner, Observer {
                 binding.recycler.adapter = Adapter(it)
             })
@@ -63,7 +64,7 @@ class CheckoutPaymentMethodListFragment : Fragment(R.layout.fragment_checkout_pa
         private data class VH(val binding: LayoutCheckoutPaymentMethodItemBinding) : RecyclerView.ViewHolder(binding.root) {
             fun bindMethod(method: PaymentMethod) {
                 binding.brandIcon.setImageResource(method.card!!.brand.icon)
-                binding.cardNumber.setText("····" + method.card!!.last4)
+                binding.cardNumber.text = "····" + method.card.last4
             }
 
             fun setSelected(selected: Boolean) {
