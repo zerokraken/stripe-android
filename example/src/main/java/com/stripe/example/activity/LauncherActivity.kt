@@ -37,6 +37,10 @@ class LauncherActivity : AppCompatActivity() {
     ) : RecyclerView.Adapter<ExamplesAdapter.ExamplesViewHolder>() {
         private val items = listOf(
             Item(
+                "Launch MC",
+                LaunchMCActivity::class.java
+            ),
+            Item(
                 activity.getString(R.string.payment_auth_example),
                 PaymentAuthActivity::class.java
             ),
