@@ -45,6 +45,11 @@ internal class CheckoutActivity : AppCompatActivity() {
 
         setupBottomSheet()
 
+        viewModel.selectedPaymentMethod.observe(this) {
+            // TODO: Show different button for Google Pay?
+            viewBinding.buyButton.isEnabled = it != null
+        }
+
         // TODO: Add loading state
         supportFragmentManager.commit {
             replace(fragmentContainerId, CheckoutPaymentMethodsListFragment())

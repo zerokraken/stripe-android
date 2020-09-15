@@ -10,8 +10,12 @@ import com.stripe.android.databinding.LayoutCheckoutPaymentMethodItemBinding
 import com.stripe.android.model.PaymentMethod
 import java.lang.IllegalStateException
 
-internal class CheckoutPaymentMethodsAdapter(val paymentMethods: List<PaymentMethod>, val addCardClickListener: View.OnClickListener) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
-    private var selectedPaymentMethodId: String? = null
+internal class CheckoutPaymentMethodsAdapter(
+    val paymentMethods: List<PaymentMethod>,
+    private var selectedPaymentMethodId: String? = null,
+    private val addCardClickListener: View.OnClickListener,
+    private val paymentMethodSelectedListener: (PaymentMethod?) -> Unit
+) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
     init {
         setHasStableIds(true)
@@ -25,7 +29,9 @@ internal class CheckoutPaymentMethodsAdapter(val paymentMethods: List<PaymentMet
             // selected a new Payment Method
             notifyItemChanged(currentlySelectedPosition)
             notifyItemChanged(position)
-            selectedPaymentMethodId = paymentMethods.getOrNull(position)?.id
+            val selectedPaymentMethod = paymentMethods.getOrNull(position)
+            paymentMethodSelectedListener(selectedPaymentMethod)
+            selectedPaymentMethodId = selectedPaymentMethod?.id
         }
     }
 
