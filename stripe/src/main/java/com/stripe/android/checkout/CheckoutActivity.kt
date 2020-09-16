@@ -6,11 +6,16 @@ import androidx.activity.viewModels
 import androidx.annotation.IdRes
 import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.commit
+import androidx.lifecycle.Observer
 import androidx.lifecycle.lifecycleScope
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_HIDDEN
 import com.google.android.material.snackbar.Snackbar
 import com.stripe.android.R
+import com.stripe.android.checkout.CheckoutViewModel.Factory
+import com.stripe.android.checkout.CheckoutViewModel.PaymentMode
+import com.stripe.android.checkout.CheckoutViewModel.SelectedPaymentMethod
+import com.stripe.android.checkout.CheckoutViewModel.TransitionTarget
 import com.stripe.android.databinding.ActivityCheckoutBinding
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -23,12 +28,17 @@ internal class CheckoutActivity : AppCompatActivity() {
         BottomSheetBehavior.from(viewBinding.bottomSheet)
     }
     private val viewModel by viewModels<CheckoutViewModel> {
-        CheckoutViewModel.Factory(application)
+        Factory(application)
     }
 
     private val fragmentContainerId: Int
         @IdRes
         get() = viewBinding.fragmentContainer.id
+
+    private val selectedPaymentMethodObserver = Observer<SelectedPaymentMethod?> {
+        // TODO: Show different button for Google Pay?
+        viewBinding.buyButton.isEnabled = it != null
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -42,13 +52,20 @@ internal class CheckoutActivity : AppCompatActivity() {
             // TODO: Communicate error to caller
             Snackbar.make(viewBinding.coordinator, "Received error: ${it.message}", Snackbar.LENGTH_LONG).show()
         }
+        viewModel.paymentMode.observe(this) {
+            viewModel.selectedPaymentMethod.removeObserver(selectedPaymentMethodObserver)
+            when (it) {
+                PaymentMode.Existing -> {
+                    viewModel.selectedPaymentMethod.observe(this, selectedPaymentMethodObserver)
+                }
+                PaymentMode.New -> {
+                    // TODO: Enable buy button when PaymentMethodCreateParams are available
+                    viewBinding.buyButton.isEnabled = false
+                }
+            }
+        }
 
         setupBottomSheet()
-
-        viewModel.selectedPaymentMethod.observe(this) {
-            // TODO: Show different button for Google Pay?
-            viewBinding.buyButton.isEnabled = it != null
-        }
 
         // TODO: Add loading state
         supportFragmentManager.commit {
@@ -58,7 +75,7 @@ internal class CheckoutActivity : AppCompatActivity() {
         viewModel.transition.observe(this) {
             supportFragmentManager.commit {
                 when (it) {
-                    CheckoutViewModel.TransitionTarget.AddCard -> {
+                    TransitionTarget.AddCard -> {
                         setCustomAnimations(
                             R.anim.stripe_checkout_transition_enter_from_right,
                             R.anim.stripe_checkout_transition_exit_to_left,

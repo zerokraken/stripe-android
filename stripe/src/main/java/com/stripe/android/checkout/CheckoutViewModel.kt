@@ -29,10 +29,12 @@ internal class CheckoutViewModel internal constructor(
     private val mutableError = MutableLiveData<Throwable>()
     private val mutableTransition = MutableLiveData<TransitionTarget>()
     private val mutableSelectedPaymentMethod = MutableLiveData<SelectedPaymentMethod?>()
+    private val mutablePaymentMode = MutableLiveData<PaymentMode>()
     internal val paymentMethods = MutableLiveData<List<PaymentMethod>>()
     internal val error: LiveData<Throwable> = mutableError
     internal val transition: LiveData<TransitionTarget> = mutableTransition
     internal val selectedPaymentMethod: LiveData<SelectedPaymentMethod?> = mutableSelectedPaymentMethod
+    internal val paymentMode: LiveData<PaymentMode> = mutablePaymentMode
 
     fun onError(throwable: Throwable) {
         mutableError.postValue(throwable)
@@ -44,6 +46,10 @@ internal class CheckoutViewModel internal constructor(
 
     fun setSelectedPaymentMethod(selectedPaymentMethod: SelectedPaymentMethod?) {
         mutableSelectedPaymentMethod.postValue(selectedPaymentMethod)
+    }
+
+    fun setPaymentMode(mode: PaymentMode) {
+        mutablePaymentMode.postValue(mode)
     }
 
     fun updatePaymentMethods(intent: Intent) {
@@ -93,6 +99,10 @@ internal class CheckoutViewModel internal constructor(
     internal sealed class SelectedPaymentMethod {
         object GooglePay : SelectedPaymentMethod()
         data class Saved(val paymentMethod: PaymentMethod) : SelectedPaymentMethod()
+    }
+
+    internal enum class PaymentMode {
+        Existing, New
     }
 
     internal class Factory(

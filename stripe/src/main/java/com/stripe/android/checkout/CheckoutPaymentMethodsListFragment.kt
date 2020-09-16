@@ -26,6 +26,8 @@ internal class CheckoutPaymentMethodsListFragment : Fragment(R.layout.fragment_c
         val binding = FragmentCheckoutPaymentMethodsListBinding.bind(view)
         binding.recycler.layoutManager = LinearLayoutManager(requireContext(), LinearLayoutManager.HORIZONTAL, false)
 
+        viewModel.setPaymentMode(CheckoutViewModel.PaymentMode.Existing)
+
         val selectedPaymentMethodId =
             (viewModel.selectedPaymentMethod.value as? SelectedPaymentMethod.Saved)?.paymentMethod?.id
 
