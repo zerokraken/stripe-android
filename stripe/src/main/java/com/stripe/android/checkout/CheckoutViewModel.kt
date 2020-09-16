@@ -13,6 +13,7 @@ import com.stripe.android.StripeApiRepository
 import com.stripe.android.StripeRepository
 import com.stripe.android.model.ListPaymentMethodsParams
 import com.stripe.android.model.PaymentMethod
+import com.stripe.android.model.PaymentMethodCreateParams
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -30,11 +31,13 @@ internal class CheckoutViewModel internal constructor(
     private val mutableTransition = MutableLiveData<TransitionTarget>()
     private val mutableSelectedPaymentMethod = MutableLiveData<SelectedPaymentMethod?>()
     private val mutablePaymentMode = MutableLiveData<PaymentMode>()
+    private val mutablePaymentMethodCreateParams = MutableLiveData<PaymentMethodCreateParams?>()
     internal val paymentMethods = MutableLiveData<List<PaymentMethod>>()
     internal val error: LiveData<Throwable> = mutableError
     internal val transition: LiveData<TransitionTarget> = mutableTransition
     internal val selectedPaymentMethod: LiveData<SelectedPaymentMethod?> = mutableSelectedPaymentMethod
     internal val paymentMode: LiveData<PaymentMode> = mutablePaymentMode
+    internal val paymentMethodCreateParams: LiveData<PaymentMethodCreateParams?> = mutablePaymentMethodCreateParams
 
     fun onError(throwable: Throwable) {
         mutableError.postValue(throwable)
@@ -50,6 +53,10 @@ internal class CheckoutViewModel internal constructor(
 
     fun setPaymentMode(mode: PaymentMode) {
         mutablePaymentMode.postValue(mode)
+    }
+
+    fun setPaymentMethodCreateParams(params: PaymentMethodCreateParams?) {
+        mutablePaymentMethodCreateParams.postValue(params)
     }
 
     fun updatePaymentMethods(intent: Intent) {

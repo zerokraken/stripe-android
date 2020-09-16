@@ -17,6 +17,7 @@ import com.stripe.android.checkout.CheckoutViewModel.PaymentMode
 import com.stripe.android.checkout.CheckoutViewModel.SelectedPaymentMethod
 import com.stripe.android.checkout.CheckoutViewModel.TransitionTarget
 import com.stripe.android.databinding.ActivityCheckoutBinding
+import com.stripe.android.model.PaymentMethodCreateParams
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -40,6 +41,10 @@ internal class CheckoutActivity : AppCompatActivity() {
         viewBinding.buyButton.isEnabled = it != null
     }
 
+    private val paymentMethodCreateParamsObserver = Observer<PaymentMethodCreateParams?> {
+        viewBinding.buyButton.isEnabled = it != null
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(viewBinding.root)
@@ -54,13 +59,13 @@ internal class CheckoutActivity : AppCompatActivity() {
         }
         viewModel.paymentMode.observe(this) {
             viewModel.selectedPaymentMethod.removeObserver(selectedPaymentMethodObserver)
+            viewModel.paymentMethodCreateParams.removeObserver(paymentMethodCreateParamsObserver)
             when (it) {
                 PaymentMode.Existing -> {
                     viewModel.selectedPaymentMethod.observe(this, selectedPaymentMethodObserver)
                 }
                 PaymentMode.New -> {
-                    // TODO: Enable buy button when PaymentMethodCreateParams are available
-                    viewBinding.buyButton.isEnabled = false
+                    viewModel.paymentMethodCreateParams.observe(this, paymentMethodCreateParamsObserver)
                 }
             }
         }
