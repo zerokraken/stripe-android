@@ -835,7 +835,7 @@ internal class StripeApiRepository @JvmOverloads internal constructor(
         CardException::class,
         JSONException::class
     )
-    override fun retrieveIssuingCardPin(
+    override suspend fun retrieveIssuingCardPin(
         cardId: String,
         verificationId: String,
         userOneTimeCode: String,
@@ -866,7 +866,7 @@ internal class StripeApiRepository @JvmOverloads internal constructor(
         AuthenticationException::class,
         CardException::class
     )
-    override fun updateIssuingCardPin(
+    override suspend fun updateIssuingCardPin(
         cardId: String,
         newPin: String,
         verificationId: String,

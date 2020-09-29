@@ -303,7 +303,7 @@ internal interface StripeRepository {
         CardException::class,
         JSONException::class
     )
-    fun retrieveIssuingCardPin(
+    suspend fun retrieveIssuingCardPin(
         cardId: String,
         verificationId: String,
         userOneTimeCode: String,
@@ -317,7 +317,7 @@ internal interface StripeRepository {
         APIException::class,
         CardException::class
     )
-    fun updateIssuingCardPin(
+    suspend fun updateIssuingCardPin(
         cardId: String,
         newPin: String,
         verificationId: String,

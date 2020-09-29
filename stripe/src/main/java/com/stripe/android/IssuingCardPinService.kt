@@ -6,6 +6,11 @@ import androidx.annotation.VisibleForTesting
 import com.stripe.android.EphemeralKeyManager.KeyManagerListener
 import com.stripe.android.Stripe.Companion.appInfo
 import com.stripe.android.exception.InvalidRequestException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlin.coroutines.CoroutineContext
 
 /**
  * Methods for retrieval / update of a Stripe Issuing card
@@ -13,7 +18,8 @@ import com.stripe.android.exception.InvalidRequestException
 class IssuingCardPinService @VisibleForTesting internal constructor(
     keyProvider: EphemeralKeyProvider,
     private val stripeRepository: StripeRepository,
-    private val operationIdFactory: OperationIdFactory = StripeOperationIdFactory()
+    private val operationIdFactory: OperationIdFactory = StripeOperationIdFactory(),
+    private val workContext: CoroutineContext
 ) {
     private val retrievalListeners = mutableMapOf<String, IssuingCardPinRetrievalListener>()
     private val updateListeners = mutableMapOf<String, IssuingCardPinUpdateListener>()
@@ -130,16 +136,27 @@ class IssuingCardPinService @VisibleForTesting internal constructor(
         operation: EphemeralOperation.Issuing.RetrievePin,
         listener: IssuingCardPinRetrievalListener
     ) {
-        runCatching {
-            val pin = stripeRepository.retrieveIssuingCardPin(
-                operation.cardId,
-                operation.verificationId,
-                operation.userOneTimeCode,
-                ephemeralKey.secret
-            )
-            listener.onIssuingCardPinRetrieved(pin)
-        }.recover {
-            onRetrievePinError(it, listener)
+
+        CoroutineScope(workContext).launch {
+            val result = runCatching {
+                stripeRepository.retrieveIssuingCardPin(
+                    operation.cardId,
+                    operation.verificationId,
+                    operation.userOneTimeCode,
+                    ephemeralKey.secret
+                )
+            }
+
+            withContext(Dispatchers.Main) {
+                result.fold(
+                    onSuccess = { pin ->
+                        listener.onIssuingCardPinRetrieved(pin)
+                    },
+                    onFailure = { error ->
+                        onRetrievePinError(error, listener)
+                    }
+                )
+            }
         }
     }
 
@@ -202,17 +219,27 @@ class IssuingCardPinService @VisibleForTesting internal constructor(
         operation: EphemeralOperation.Issuing.UpdatePin,
         listener: IssuingCardPinUpdateListener
     ) {
-        runCatching {
-            stripeRepository.updateIssuingCardPin(
-                operation.cardId,
-                operation.newPin,
-                operation.verificationId,
-                operation.userOneTimeCode,
-                ephemeralKey.secret
-            )
-            listener.onIssuingCardPinUpdated()
-        }.recover {
-            onUpdatePinError(it, listener)
+        CoroutineScope(workContext).launch {
+            val result = runCatching {
+                stripeRepository.updateIssuingCardPin(
+                    operation.cardId,
+                    operation.newPin,
+                    operation.verificationId,
+                    operation.userOneTimeCode,
+                    ephemeralKey.secret
+                )
+            }
+
+            withContext(Dispatchers.Main) {
+                result.fold(
+                    onSuccess = {
+                        listener.onIssuingCardPinUpdated()
+                    },
+                    onFailure = { error ->
+                        onUpdatePinError(error, listener)
+                    }
+                )
+            }
         }
     }
 
@@ -328,7 +355,8 @@ class IssuingCardPinService @VisibleForTesting internal constructor(
             return IssuingCardPinService(
                 keyProvider,
                 StripeApiRepository(context, publishableKey, appInfo),
-                StripeOperationIdFactory()
+                StripeOperationIdFactory(),
+                Dispatchers.IO
             )
         }
     }

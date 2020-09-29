@@ -6,16 +6,23 @@ import com.nhaarman.mockitokotlin2.mock
 import com.nhaarman.mockitokotlin2.verify
 import com.nhaarman.mockitokotlin2.whenever
 import com.stripe.android.testharness.TestEphemeralKeyProvider
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.TestCoroutineDispatcher
+import kotlinx.coroutines.test.setMain
 import org.json.JSONObject
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import kotlin.test.BeforeTest
 import kotlin.test.Test
 
 /**
  * Test class for [IssuingCardPinService].
  */
+@ExperimentalCoroutinesApi
 @RunWith(RobolectricTestRunner::class)
 class IssuingCardPinServiceTest {
+    private val testDispatcher = TestCoroutineDispatcher()
     private val stripeApiRequestExecutor: ApiRequestExecutor = mock()
     private val retrievalListener: IssuingCardPinService.IssuingCardPinRetrievalListener = mock()
     private val updateListener: IssuingCardPinService.IssuingCardPinUpdateListener = mock()
@@ -31,8 +38,14 @@ class IssuingCardPinServiceTest {
             it.setNextRawEphemeralKey(EPHEMERAL_KEY.toString())
         },
         stripeRepository,
-        OperationIdFactory.get()
+        OperationIdFactory.get(),
+        testDispatcher
     )
+
+    @BeforeTest
+    fun setup() {
+        Dispatchers.setMain(testDispatcher)
+    }
 
     @Test
     fun testRetrieval() {
