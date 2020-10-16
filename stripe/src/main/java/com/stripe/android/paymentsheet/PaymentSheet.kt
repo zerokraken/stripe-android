@@ -10,6 +10,7 @@ import com.stripe.android.view.ActivityStarter
 import kotlinx.android.parcel.Parcelize
 
 class PaymentSheet(val clientSecret: String, val ephemeralKey: String, val customerId: String) {
+
     fun confirm(activity: ComponentActivity, callback: (CompletionStatus) -> Unit) {
         // TODO: Use ActivityResultContract and call callback instead of using onActivityResult
         // when androidx.activity:1.2.0 hits GA

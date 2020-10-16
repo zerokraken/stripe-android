@@ -26,9 +26,13 @@ import com.stripe.android.StripePaymentController
 import com.stripe.android.StripeRepository
 import com.stripe.android.model.ConfirmPaymentIntentParams
 import com.stripe.android.model.ListPaymentMethodsParams
+import com.stripe.android.model.PaymentIntent
 import com.stripe.android.model.PaymentMethod
 import com.stripe.android.paymentsheet.model.PaymentSelection
 import com.stripe.android.view.AuthActivityStarter
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.lang.IllegalStateException
 
@@ -36,8 +40,10 @@ internal class PaymentSheetViewModel internal constructor(
     private val publishableKey: String,
     private val stripeAccountId: String?,
     private val stripeRepository: StripeRepository,
-    private val paymentController: PaymentController
+    private val paymentController: PaymentController,
+    private val workContext: CoroutineDispatcher = Dispatchers.IO
 ) : ViewModel() {
+    private val mutablePaymentIntent = MutableLiveData<PaymentIntent>()
     private val mutableError = MutableLiveData<Throwable>()
     private val mutableTransition = MutableLiveData<TransitionTarget>()
     private val mutableSheetMode = MutableLiveData<SheetMode>()
@@ -50,6 +56,7 @@ internal class PaymentSheetViewModel internal constructor(
     internal val selection: LiveData<PaymentSelection?> = mutableSelection.distinctUntilChanged()
     internal val paymentIntentResult: LiveData<PaymentIntentResult> = mutablePaymentIntentResult.distinctUntilChanged()
     internal val sheetMode: LiveData<SheetMode> = mutableSheetMode.distinctUntilChanged()
+    internal val paymentIntent: LiveData<PaymentIntent> = mutablePaymentIntent
 
     fun onError(throwable: Throwable) {
         mutableError.postValue(throwable)
@@ -69,6 +76,15 @@ internal class PaymentSheetViewModel internal constructor(
                 args.ephemeralKey,
                 args.customerId
             )
+        }
+    }
+
+    fun fetchPaymentIntent(intent: Intent) {
+        getPaymentSheetActivityArgs(intent)?.let { args ->
+            CoroutineScope(workContext).launch {
+                val intent = stripeRepository.retrievePaymentIntent(args.clientSecret, ApiRequest.Options(publishableKey, stripeAccountId))
+                mutablePaymentIntent.postValue(intent)
+            }
         }
     }
 

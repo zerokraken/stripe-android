@@ -21,14 +21,26 @@ class PaymentSheetLoadingFragment : Fragment(R.layout.fragment_payment_sheet_loa
             return
         }
 
-        activityViewModel.paymentMethods.observe(requireActivity()) { paymentMethods ->
-            val target = if (paymentMethods.isEmpty()) {
-                TransitionTarget.AddPaymentMethodSheet
-            } else {
-                TransitionTarget.SelectSavedPaymentMethod
-            }
-            activityViewModel.transitionTo(target)
+        activityViewModel.paymentIntent.observe(requireActivity()) {
+            maybeTransition()
+        }
+        activityViewModel.paymentMethods.observe(requireActivity()) {
+            maybeTransition()
         }
         activityViewModel.updatePaymentMethods(requireActivity().intent)
+        activityViewModel.fetchPaymentIntent(requireActivity().intent)
+    }
+
+    private fun maybeTransition() {
+        if (activityViewModel.paymentIntent.value == null) {
+            return
+        }
+        val paymentMethods = activityViewModel.paymentMethods.value ?: return
+        val target = if (paymentMethods.isEmpty()) {
+            TransitionTarget.AddPaymentMethodSheet
+        } else {
+            TransitionTarget.SelectSavedPaymentMethod
+        }
+        activityViewModel.transitionTo(target)
     }
 }

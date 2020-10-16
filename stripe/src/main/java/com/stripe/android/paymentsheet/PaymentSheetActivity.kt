@@ -67,7 +67,19 @@ internal class PaymentSheetActivity : AppCompatActivity() {
             when (it.outcome) {
                 StripeIntentResult.Outcome.SUCCEEDED -> {
                     // TOOD: Show success state before exiting
-                    animateOut(PaymentSheet.CompletionStatus.Succeeded(it.intent))
+                    viewBinding.buyButton.text = ""
+                    viewBinding.buyButton.setBackgroundColor(resources.getColor(R.color.stripe_paymentsheet_buy_button_confirm_background))
+                    viewBinding.progress.visibility = View.GONE
+                    viewBinding.check.apply {
+                        bringToFront()
+                        z = Float.MAX_VALUE
+                        parent.requestLayout()
+                    }
+                    viewBinding.check.visibility = View.VISIBLE
+                    lifecycleScope.launch {
+                        delay(1000)
+                        animateOut(PaymentSheet.CompletionStatus.Succeeded(it.intent))
+                    }
                 }
                 else -> {
                     // TODO: Display error state in UI
@@ -123,12 +135,35 @@ internal class PaymentSheetActivity : AppCompatActivity() {
     }
 
     private fun setupBuyButton() {
+        viewModel.paymentIntent.observe(this) { intent ->
+            viewBinding.buyButton.text = "Pay $${intent.amount!! / 100 }.${intent.amount % 100}"
+        }
         // TOOD(smaskell): Set text based on currency & amount in payment intent
         viewModel.selection.observe(this) {
+            val enabled = it != null
             // TODO(smaskell): show Google Pay button when GooglePay selected
-            viewBinding.buyButton.isEnabled = it != null
+            viewBinding.buyButton.isEnabled = enabled
+            viewBinding.lock.apply {
+                bringToFront()
+                z = Float.MAX_VALUE
+                parent.requestLayout()
+            }
+            viewBinding.lock.visibility = if (enabled) View.VISIBLE else View.GONE
         }
         viewBinding.buyButton.setOnClickListener {
+            viewBinding.lock.visibility = View.GONE
+            viewBinding.progressWrapper.apply {
+                bringToFront()
+                z = Float.MAX_VALUE - 1
+                parent.requestLayout()
+            }
+            viewBinding.progress.apply {
+                bringToFront()
+                z = Float.MAX_VALUE
+                parent.requestLayout()
+            }
+            viewBinding.progress.visibility = View.VISIBLE
+            viewBinding.buyButton.text = "Processing..."
             viewModel.checkout(this)
         }
     }
