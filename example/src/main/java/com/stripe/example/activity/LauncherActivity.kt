@@ -3,14 +3,25 @@ package com.stripe.example.activity
 import android.app.Activity
 import android.content.Intent
 import android.os.Bundle
+import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.FrameLayout
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.os.bundleOf
+import androidx.core.view.isGone
+import androidx.fragment.app.Fragment
+import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.stripe.android.paymentsheet.PaymentSheet
 import com.stripe.example.R
 import com.stripe.example.databinding.LauncherActivityBinding
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 class LauncherActivity : AppCompatActivity() {
 
@@ -30,6 +41,32 @@ class LauncherActivity : AppCompatActivity() {
             layoutManager = linearLayoutManager
             adapter = ExamplesAdapter(this@LauncherActivity)
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+
+        lifecycleScope.launch {
+            delay(2000)
+            startPaymentSheetLauncherFragment(
+                this@LauncherActivity,
+                "pi_1ISjP8CRMbs6FrXfAdnoXUZX_secret_PvjS1Jf4K3qev4G8i9O7QsVqJ"
+            )
+        }
+    }
+
+    private fun startPaymentSheetLauncherFragment(
+        activity: FragmentActivity,
+        clientSecret: String
+    ) {
+        val fragment = InvisibleFragment().also {
+            it.arguments = bundleOf(
+                "client_secret" to clientSecret
+            )
+        }
+        activity.supportFragmentManager.beginTransaction()
+            .add(fragment, "payment_sheet_launch_fragment")
+            .commit()
     }
 
     private class ExamplesAdapter constructor(
@@ -137,5 +174,31 @@ class LauncherActivity : AppCompatActivity() {
         private class ExamplesViewHolder constructor(
             itemView: View
         ) : RecyclerView.ViewHolder(itemView)
+    }
+
+    internal class InvisibleFragment : Fragment() {
+        override fun onCreateView(
+            inflater: LayoutInflater,
+            container: ViewGroup?,
+            savedInstanceState: Bundle?
+        ): View {
+            return FrameLayout(requireActivity()).also {
+                it.isGone = true
+            }
+        }
+
+        override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+            super.onViewCreated(view, savedInstanceState)
+
+            val paymentSheet = PaymentSheet(this) { result ->
+                result
+                Toast.makeText(requireActivity(), result.toString(), Toast.LENGTH_SHORT)
+                    .show()
+            }
+
+            paymentSheet.present(
+                paymentIntentClientSecret = arguments?.getString("client_secret").orEmpty()
+            )
+        }
     }
 }

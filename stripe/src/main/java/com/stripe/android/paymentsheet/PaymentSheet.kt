@@ -18,7 +18,7 @@ class PaymentSheet internal constructor(
         DefaultPaymentSheetLauncher(activity, callback)
     )
 
-    internal constructor(
+    constructor(
         fragment: Fragment,
         callback: PaymentSheetResultCallback
     ) : this(
@@ -44,7 +44,7 @@ class PaymentSheet internal constructor(
      * If [paymentIntentClientSecret] represents a [PaymentIntent] that is already confirmed,
      * [PaymentSheetResultCallback] will be invoked with [PaymentResult.Completed].
      */
-    internal fun present(
+    fun present(
         paymentIntentClientSecret: String
     ) {
         paymentSheetLauncher.present(paymentIntentClientSecret)
