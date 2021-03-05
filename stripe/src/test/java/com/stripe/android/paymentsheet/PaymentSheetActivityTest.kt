@@ -14,9 +14,10 @@ import com.stripe.android.PaymentConfiguration
 import com.stripe.android.PaymentIntentResult
 import com.stripe.android.StripeIntentResult
 import com.stripe.android.model.ConfirmPaymentIntentParams
+import com.stripe.android.model.PaymentIntent
 import com.stripe.android.model.PaymentIntentFixtures
+import com.stripe.android.model.PaymentMethod
 import com.stripe.android.model.PaymentMethodFixtures
-import com.stripe.android.model.StripeIntent
 import com.stripe.android.payments.FakePaymentFlowResultProcessor
 import com.stripe.android.payments.PaymentFlowResult
 import com.stripe.android.paymentsheet.analytics.EventReporter
@@ -50,22 +51,10 @@ internal class PaymentSheetActivityTest {
     private val context = ApplicationProvider.getApplicationContext<Context>()
     private val testDispatcher = TestCoroutineDispatcher()
 
-    private val paymentFlowResultProcessor = FakePaymentFlowResultProcessor()
     private val googlePayRepository = FakeGooglePayRepository(true)
     private val eventReporter = mock<EventReporter>()
 
-    private val viewModel = PaymentSheetViewModel(
-        publishableKey = ApiKeyFixtures.FAKE_PUBLISHABLE_KEY,
-        stripeAccountId = null,
-        paymentIntentRepository = PaymentIntentRepository.Static(PAYMENT_INTENT),
-        paymentMethodsRepository = PaymentMethodsRepository.Static(PAYMENT_METHODS),
-        paymentFlowResultProcessor = paymentFlowResultProcessor,
-        googlePayRepository = googlePayRepository,
-        prefsRepository = FakePrefsRepository(),
-        eventReporter = eventReporter,
-        args = PaymentSheetFixtures.ARGS_CUSTOMER_WITH_GOOGLEPAY,
-        workContext = testDispatcher
-    )
+    private val viewModel = createViewModel()
 
     private val contract = PaymentSheetContract()
 
@@ -232,12 +221,11 @@ internal class PaymentSheetActivityTest {
 
     @Test
     fun `successful payment should dismiss bottom sheet`() {
-        paymentFlowResultProcessor.paymentIntentResult = PaymentIntentResult(
-            intent = PAYMENT_INTENT.copy(status = StripeIntent.Status.Succeeded),
-            outcomeFromFlow = StripeIntentResult.Outcome.SUCCEEDED
+        val viewModel = createViewModel(
+            paymentIntentResult = PaymentIntentResult(PaymentIntentFixtures.PI_SUCCEEDED)
         )
 
-        val scenario = activityScenario()
+        val scenario = activityScenario(viewModel)
         scenario.launch(intent).onActivity { activity ->
             // wait for bottom sheet to animate in
             testDispatcher.advanceTimeBy(500)
@@ -258,17 +246,8 @@ internal class PaymentSheetActivityTest {
 
     @Test
     fun `shows add card fragment when no payment methods available`() {
-        val viewModel = PaymentSheetViewModel(
-            publishableKey = ApiKeyFixtures.FAKE_PUBLISHABLE_KEY,
-            stripeAccountId = null,
-            paymentIntentRepository = PaymentIntentRepository.Static(PAYMENT_INTENT),
-            paymentMethodsRepository = PaymentMethodsRepository.Static(emptyList()),
-            paymentFlowResultProcessor = paymentFlowResultProcessor,
-            googlePayRepository = googlePayRepository,
-            prefsRepository = FakePrefsRepository(),
-            eventReporter = eventReporter,
-            args = PaymentSheetFixtures.ARGS_CUSTOMER_WITH_GOOGLEPAY,
-            workContext = testDispatcher
+        val viewModel = createViewModel(
+            paymentMethods = emptyList()
         )
 
         val scenario = activityScenario(viewModel)
@@ -336,6 +315,29 @@ internal class PaymentSheetActivityTest {
         }
     }
 
+    @Test
+    fun `if fetched PaymentIntent is confirmed then `() {
+        val viewModel = createViewModel(
+            paymentIntent = PaymentIntentFixtures.PI_SUCCEEDED
+        )
+
+        val scenario = activityScenario(viewModel)
+        scenario.launch(intent).onActivity { activity ->
+            // wait for bottom sheet to animate in
+            testDispatcher.advanceTimeBy(BottomSheetController.ANIMATE_IN_DELAY)
+            activity.finish()
+        }
+
+        assertThat(
+            contract.parseResult(
+                scenario.getResult().resultCode,
+                scenario.getResult().resultData
+            )
+        ).isEqualTo(
+            PaymentResult.Completed(PaymentIntentFixtures.PI_SUCCEEDED)
+        )
+    }
+
     private fun currentFragment(activity: PaymentSheetActivity) =
         activity.supportFragmentManager.findFragmentById(activity.viewBinding.fragmentContainer.id)
 
@@ -347,6 +349,29 @@ internal class PaymentSheetActivityTest {
                 viewModelFactory = viewModelFactoryFor(viewModel)
             }
         }
+    }
+
+    private fun createViewModel(
+        paymentIntent: PaymentIntent = PAYMENT_INTENT,
+        paymentMethods: List<PaymentMethod> = PAYMENT_METHODS,
+        paymentIntentResult: PaymentIntentResult = PaymentIntentResult(paymentIntent)
+    ): PaymentSheetViewModel {
+        val paymentFlowResultProcessor = FakePaymentFlowResultProcessor().also {
+            it.paymentIntentResult = paymentIntentResult
+        }
+
+        return PaymentSheetViewModel(
+            publishableKey = ApiKeyFixtures.FAKE_PUBLISHABLE_KEY,
+            stripeAccountId = null,
+            paymentIntentRepository = PaymentIntentRepository.Static(paymentIntent),
+            paymentMethodsRepository = PaymentMethodsRepository.Static(paymentMethods),
+            paymentFlowResultProcessor = paymentFlowResultProcessor,
+            googlePayRepository = googlePayRepository,
+            prefsRepository = FakePrefsRepository(),
+            eventReporter = eventReporter,
+            args = PaymentSheetFixtures.ARGS_CUSTOMER_WITH_GOOGLEPAY,
+            workContext = testDispatcher
+        )
     }
 
     private companion object {

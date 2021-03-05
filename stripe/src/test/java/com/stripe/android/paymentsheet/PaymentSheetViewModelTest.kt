@@ -382,6 +382,31 @@ internal class PaymentSheetViewModelTest {
             .isTrue()
     }
 
+    @Test
+    fun `viewState should emit Completed if PaymentIntent is confirmed`() {
+        val viewModel = createViewModel(
+            paymentIntentRepository = PaymentIntentRepository.Static(
+                PaymentIntentFixtures.PI_SUCCEEDED
+            )
+        )
+
+        val viewStates = mutableListOf<ViewState?>()
+        viewModel.viewState.observeForever {
+            viewStates.add(it)
+        }
+        viewModel.fetchPaymentIntent()
+        assertThat(
+            viewStates.filterNotNull()
+        ).containsExactly(
+            ViewState.Completed(
+                PaymentIntentResult(
+                    PaymentIntentFixtures.PI_SUCCEEDED,
+                    StripeIntentResult.Outcome.SUCCEEDED
+                )
+            )
+        )
+    }
+
     private fun createViewModel(
         args: PaymentSheetContract.Args = ARGS_CUSTOMER_WITH_GOOGLEPAY,
         paymentIntentRepository: PaymentIntentRepository = PaymentIntentRepository.Static(PAYMENT_INTENT),
